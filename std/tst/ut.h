@@ -15,6 +15,10 @@ namespace stl {
         virtual const TestArgs& args() const noexcept = 0;
     };
 
+    // fixed test ports are shifted by STD_TEST_PORT_OFFSET, so the Windows and
+    // Linux suites can run on the same host without colliding
+    u16 testPort(u16 base) noexcept;
+
     struct TestFunc: public TreapNode {
         virtual void execute(ExecContext& ctx) const = 0;
         virtual StringView suite() const = 0;

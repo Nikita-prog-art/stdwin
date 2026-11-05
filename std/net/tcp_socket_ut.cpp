@@ -34,7 +34,7 @@ STD_TEST_SUITE(TcpSocket) {
         auto srv = TcpSocket::create(pool.mutPtr(), sfd, exec);
         srv->setReuseAddr(true);
 
-        auto addr = makeAddr(17654);
+        auto addr = makeAddr(testPort(17654));
         STD_INSIST(srv->bind((sockaddr*)&addr, sizeof(addr)) == 0);
         STD_INSIST(srv->listen(8) == 0);
 
@@ -56,7 +56,7 @@ STD_TEST_SUITE(TcpSocket) {
         });
 
         exec->spawn([&] {
-            auto caddr = makeAddr(17654);
+            auto caddr = makeAddr(testPort(17654));
             int cfd;
             STD_INSIST(TcpSocket::connectInf(&cfd, exec, (sockaddr*)&caddr, sizeof(caddr)) == 0);
 
@@ -92,7 +92,7 @@ STD_TEST_SUITE(TcpSocket) {
         auto srv = TcpSocket::create(pool.mutPtr(), sfd, exec);
         srv->setReuseAddr(true);
 
-        auto addr = makeAddr(17655);
+        auto addr = makeAddr(testPort(17655));
         STD_INSIST(srv->bind((sockaddr*)&addr, sizeof(addr)) == 0);
         STD_INSIST(srv->listen(8) == 0);
 

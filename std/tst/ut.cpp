@@ -18,12 +18,26 @@
 #include <std/lib/vector.h>
 #include <std/alg/minmax.h>
 #include <std/str/builder.h>
+
+#include <stdlib.h>
 #include <std/mem/obj_pool.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 
 using namespace stl;
+
+u16 stl::testPort(u16 base) noexcept {
+    static const u16 offset = [] {
+        if (auto value = getenv("STD_TEST_PORT_OFFSET")) {
+            return (u16)atoi(value);
+        }
+
+        return (u16)0;
+    }();
+
+    return (u16)(base + offset);
+}
 
 namespace {
     struct Exc {

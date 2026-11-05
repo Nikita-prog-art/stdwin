@@ -14,6 +14,9 @@ nix-shell -p 'pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.cla
 # Run the tests natively when Windows interop is available (WSL); otherwise
 # copy .build-win/tst/test.exe to a Windows machine.
 if [ -n "${WSL_DISTRO_NAME:-}" ] || [ -e /proc/sys/fs/binfmt_misc/WSLInterop ]; then
+    # WSL only forwards variables listed in WSLENV to Windows processes
+    WSLENV="${WSLENV:+${WSLENV}:}STD_TEST_PORT_OFFSET" \
+    STD_TEST_PORT_OFFSET="${STD_TEST_PORT_OFFSET:-1000}" \
     timeout 600 ./.build-win/tst/test.exe --top=20
 else
     echo "built: run .build-win/tst/test.exe on Windows" >&2

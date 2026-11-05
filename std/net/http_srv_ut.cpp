@@ -54,7 +54,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
             }
         } handler;
 
-        auto addr = makeAddr(17670);
+        auto addr = makeAddr(testPort(17670));
         auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
@@ -65,7 +65,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
                                         });
 
         exec->spawn([&] {
-            auto caddr = makeAddr(17670);
+            auto caddr = makeAddr(testPort(17670));
             int cfd;
             STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);
@@ -110,7 +110,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
             }
         } handler;
 
-        auto addr = makeAddr(17671);
+        auto addr = makeAddr(testPort(17671));
         auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
@@ -121,7 +121,7 @@ STD_TEST_SUITE(HttpServerRequestParsing) {
                                         });
 
         exec->spawn([&] {
-            auto caddr = makeAddr(17671);
+            auto caddr = makeAddr(testPort(17671));
             int cfd;
             STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);
@@ -163,7 +163,7 @@ STD_TEST_SUITE(HttpServer) {
             }
         } handler;
 
-        auto addr = makeAddr(17661);
+        auto addr = makeAddr(testPort(17661));
         auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
@@ -177,7 +177,7 @@ STD_TEST_SUITE(HttpServer) {
         Buffer respBody;
 
         exec->spawn([&] {
-            auto caddr = makeAddr(17661);
+            auto caddr = makeAddr(testPort(17661));
             int cfd;
             STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);
@@ -226,7 +226,7 @@ STD_TEST_SUITE(HttpServer) {
             }
         } handler;
 
-        auto addr = makeAddr(17663);
+        auto addr = makeAddr(testPort(17663));
         auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
@@ -240,7 +240,7 @@ STD_TEST_SUITE(HttpServer) {
         Buffer body2;
 
         exec->spawn([&] {
-            auto caddr = makeAddr(17663);
+            auto caddr = makeAddr(testPort(17663));
             int cfd;
             STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);
@@ -306,7 +306,7 @@ STD_TEST_SUITE(HttpServer) {
             }
         } handler;
 
-        auto addr = makeAddr(17662);
+        auto addr = makeAddr(testPort(17662));
         auto& wg = *WaitGroup::create(pool.mutPtr(), 0, exec);
         auto ctl = serve(pool.mutPtr(), {
                                             .handler = &handler,
@@ -320,7 +320,7 @@ STD_TEST_SUITE(HttpServer) {
         Buffer body2;
 
         exec->spawn([&] {
-            auto caddr = makeAddr(17662);
+            auto caddr = makeAddr(testPort(17662));
             int cfd;
             STD_INSIST(TcpSocket::connectInf(&cfd, exec, (const sockaddr*)&caddr, sizeof(caddr)) == 0);
             TcpSocket cli(cfd, exec);

@@ -40,10 +40,12 @@ available (WSL). Produced binaries are linked statically against libc++/libunwin
 so they only need the system UCRT and `WS2_32.dll`; no MinGW runtime DLLs are
 shipped.
 
-Both test suites bind fixed loopback ports. On a WSL host the network stack is
-shared with Windows, and Windows keeps closed connections in `TIME_WAIT` for a
-few minutes, so run the Linux and Windows suites several minutes apart (or the
-second run fails to bind with `EADDRINUSE`).
+Both test suites bind fixed loopback ports, and on a WSL host Windows and Linux
+share the network stack. `dev/win.sh` therefore runs the Windows tests with
+`STD_TEST_PORT_OFFSET=1000`, which shifts every fixed test port. On WSL the
+variable must also be listed in `WSLENV` to reach the Windows process; `dev/win.sh`
+takes care of both. Set the same variables when running `test.exe` manually next
+to a Linux test run.
 
 Platform notes:
 

@@ -40,7 +40,7 @@ STD_TEST_SUITE(TcpStream) {
         int opt = 1;
         stdSetSockOpt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-        auto addr = makeAddr(17660);
+        auto addr = makeAddr(testPort(17660));
         STD_INSIST(srv.bind((sockaddr*)&addr, sizeof(addr)) == 0);
         STD_INSIST(srv.listen(8) == 0);
 
@@ -60,7 +60,7 @@ STD_TEST_SUITE(TcpStream) {
         });
 
         exec->spawn([&] {
-            auto caddr = makeAddr(17660);
+            auto caddr = makeAddr(testPort(17660));
             int cfd;
             STD_INSIST(TcpSocket::connectInf(&cfd, exec, (sockaddr*)&caddr, sizeof(caddr)) == 0);
 

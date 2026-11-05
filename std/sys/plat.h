@@ -15,7 +15,6 @@
     #include <fcntl.h>
     #include <malloc.h>
     #include <direct.h>
-    #include <process.h>
     #include <stdio.h>
     #include <stdlib.h>
 
@@ -152,10 +151,11 @@ namespace stl {
     size_t stdFromWide(const wchar_t* src, char* dst, size_t cap) noexcept;
     void stdFreeWide(wchar_t* ptr) noexcept;
 
-    // switches the current thread to stackTop and runs fn(arg) there; exits the
-    // thread afterwards, it never returns to the caller
+    // switches the current thread to [stackLimit, stackTop) and runs fn(arg)
+    // there; the stack bounds are published in the TEB so SEH unwinding works.
+    // The thread is exited afterwards, the function never returns.
     using StdThreadFn = void (*)(void*);
-    void stdRunOnStack(void* stackTop, StdThreadFn fn, void* arg);
+    void stdRunOnStack(void* stackTop, void* stackLimit, StdThreadFn fn, void* arg);
 
     #ifndef setenv
         inline int setenv(const char* name, const char* value, int overwrite) {

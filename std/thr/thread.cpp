@@ -33,7 +33,7 @@ namespace {
         static DWORD WINAPI stackEntry(void* arg) {
             auto self = (WinThreadImpl*)arg;
 
-            stdRunOnStack((char*)self->stack_ + self->stackSize_, runEntry, self);
+            stdRunOnStack((char*)self->stack_ + self->stackSize_, self->stack_, runEntry, self);
 
             return 0;
         }

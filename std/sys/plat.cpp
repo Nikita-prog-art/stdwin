@@ -7,13 +7,11 @@
 #include <std/dbg/insist.h>
 
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_WIN32)
     #include <sys/stat.h>
-#else
-    #include <stdlib.h>
-    #include <string.h>
 #endif
 
 using namespace stl;
@@ -1137,13 +1135,18 @@ extern "C" [[noreturn]] void stdThreadStackDone() {
     ExitThread(0);
 }
 
-__attribute__((naked, noreturn)) void stl::stdRunOnStack(void*, StdThreadFn, void*) {
+__attribute__((naked, noreturn)) void stl::stdRunOnStack(void*, void*, StdThreadFn, void*) {
+    // Win64: rcx = stackTop, rdx = stackLimit, r8 = fn, r9 = arg
     __asm__(
+        "movq %rcx, %r10\n\t"
+        "movq %rdx, %r11\n\t"
         "movq %rcx, %rsp\n\t"
         "andq $-16, %rsp\n\t"
         "subq $32, %rsp\n\t"
-        "movq %r8, %rcx\n\t"
-        "call *%rdx\n\t"
+        "movq %r10, %gs:8\n\t"
+        "movq %r11, %gs:16\n\t"
+        "movq %r9, %rcx\n\t"
+        "call *%r8\n\t"
         "call stdThreadStackDone\n\t"
         "ud2\n\t");
 }

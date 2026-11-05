@@ -94,7 +94,7 @@ With ObjPool, the second cost disappears. The concrete object is allocated from 
 
 This means you can freely use interfaces to:
 
-- **Decouple headers.** A header declares `PollerIface*` — one line, no platform includes. The `.cpp` picks `EpollPoller`, `KqueuePoller`, or `PollPoller` at construction time.
+- **Decouple headers.** A header declares `PollerIface*` — one line, no platform includes. The `.cpp` picks `EpollPoller`, `KqueuePoller`, or `PollPoller` (backed by `WSAPoll` on Windows) at construction time.
 - **Swap implementations.** Testing with a mock poller? Same interface, same pool.
 - **Compose decorators.** `ZeroCopyInput` wraps into `ChunkedInput` wraps into `LimitedInput` — each allocated from the same pool, each sitting next to the other in memory.
 

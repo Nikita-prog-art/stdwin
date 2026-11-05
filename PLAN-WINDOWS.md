@@ -23,9 +23,9 @@
 Порт по варианту A выполнен и проверен. Сборка — кросс-компилятором clang из
 nixpkgs (`pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.clang`),
 прогон тестов — нативно на Windows (через WSL interop, без Wine):
-**1397 OK, 0 ERR, 0 SKIP**; Linux-прогон (GCC 16) — те же 1397 OK.
+**1398 OK, 0 ERR, 0 SKIP**; Linux-прогон (GCC 16) — те же 1398 OK.
 Дополнительно проверена сборка и работа с c-ares и xxhash (Windows-бэкенды DNS и
-хеша): полный прогон — 1397 OK, 0 ERR.
+хеша): полный прогон — 1398 OK, 0 ERR.
 
 Отличия от плана ниже:
 
@@ -35,14 +35,18 @@ nixpkgs (`pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.clang`)
 - CI не добавлялся, а существовавший `.github/workflows/ci.yml` удалён: все
   прогоны делаются локально перед коммитами;
 - фазы A6.1 (санитайзеры clang) и A7 (IOCP, бенчмарки) в текущий объём не входят;
+  более того, в nixpkgs-пакете compiler-rt для mingw нет `libclang_rt.asan` под
+  Windows, поэтому A6.1 с этим тулчейном невыполним без отдельного llvm-mingw;
 - проверка выполнения — запуск `.exe` на Windows, а не Wine;
-- OpenSSL-бэкенд TLS на Windows не проверен: кросс-сборка openssl в nixpkgs падает
-  на компиляции `.rc` (`winver.h`); сам `ssl_socket.cpp` от платформы не зависит и
-  собирается с включённым бэкендом на других платформах.
+- TLS-бэкенды на Windows не проверены: кросс-сборка openssl в nixpkgs падает на
+  компиляции `.rc` (`winver.h`), а mbedtls — на `pthread.h` (в этом тулчейне нет
+  winpthreads). Сам `ssl_socket.cpp` от платформы не зависит и собирается с
+  включённым бэкендом на других платформах.
 
 Реализованный платформенный слой: `std/sys/plat.h` + `std/sys/plat.cpp`, тег
 сокетов в `int`, `WSAPoll`-поллер, UDP-пара как `EventFD`/`JoinPipe`,
-Win64-переключение контекста с публикацией стека в TEB, Win32-примитивы потоков
+Win64-переключение контекста и явных стеков потоков с публикацией границ стека в
+TEB (иначе SEH не разматывает исключения), Win32-примитивы потоков
 (`SRWLOCK`, `CONDITION_VARIABLE`, `CreateSemaphore`, `CreateThread`),
 UTF-8 → UTF-16 на границе Win32.
 

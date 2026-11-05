@@ -489,6 +489,36 @@ STD_TEST_SUITE(Thread) {
         STD_INSIST(probe.observed < probe.hi);
     }
 
+    STD_TEST(ExplicitStackException) {
+        struct ThrowRunable: public Runable {
+            bool* caught;
+
+            explicit ThrowRunable(bool* c)
+                : caught(c)
+            {
+            }
+
+            void run() noexcept override {
+                try {
+                    throw 7;
+                } catch (int value) {
+                    *caught = value == 7;
+                }
+            }
+        };
+
+        auto pool = ObjPool::fromMemory();
+        constexpr size_t stackSize = 1 << 20;
+        void* stack = pool->allocateOverAligned(stackSize, pageSize());
+        bool caught = false;
+        ThrowRunable runnable(&caught);
+
+        auto t = Thread::create(pool.mutPtr(), runnable, stack, stackSize);
+        t->join();
+
+        STD_INSIST(caught);
+    }
+
     STD_TEST(ExplicitStackMultipleThreads) {
         auto pool = ObjPool::fromMemory();
         constexpr size_t stackSize = 1 << 20;

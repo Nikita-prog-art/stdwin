@@ -319,6 +319,8 @@ WaitablePoller* WaitablePoller::create(ObjPool* pool) {
 #elif defined(__APPLE__) || defined(__FreeBSD__)
     return pool->make<KqueuePoller>();
 #else
+    (void)pool;
+
     return nullptr;
 #endif
 }

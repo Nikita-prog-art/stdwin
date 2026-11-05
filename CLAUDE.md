@@ -13,6 +13,15 @@ This sets up deps via `ix`, builds with `./build`, and runs
 
 To build only: `./build`. To run tests only: `./.build/tst/test`.
 
+Windows (native Win32, cross-compiled with clang from nixpkgs; GCC is not used):
+
+```
+./dev/win.sh
+```
+
+It builds into `.build-win` and runs `.build-win/tst/test.exe`; see `BUILD.md`
+for the exact toolchain invocation and optional Windows backends.
+
 Source/test discovery uses `build.glob`: files ending in `_ut.cpp` are compiled
 into the unit-test runner, the other `std/*/*.cpp` files go into `libstd.a`, and
 every `tst/*.cpp` file becomes a binary without a hardcoded target list.

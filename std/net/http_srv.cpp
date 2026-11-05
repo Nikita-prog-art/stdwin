@@ -29,9 +29,7 @@
 #include <std/ios/stream_tcp.h>
 #include <std/thr/wait_group.h>
 
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
@@ -317,7 +315,7 @@ void HttpServerCtlImpl::stop() {
         int cfd;
 
         if (TcpSocket::connectInf(&cfd, opts_->exec, opts_->addr, opts_->addrLen) == 0) {
-            ::close(cfd);
+            stdClose(cfd);
         }
     });
 }

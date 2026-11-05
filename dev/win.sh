@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -xue
+
+JOBS="${JOBS:-$(nproc)}"
+
+nix-shell -p 'pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.clang' --run "
+    CC=x86_64-w64-mingw32-clang \
+    CXX=x86_64-w64-mingw32-clang++ \
+    AR=x86_64-w64-mingw32-ar \
+    ./build --target x86_64-w64-mingw32 -B .build-win -j ${JOBS}
+"
+
+# Run the tests natively when Windows interop is available (WSL); otherwise
+# copy .build-win/tst/test.exe to a Windows machine.
+if [ -n "${WSL_DISTRO_NAME:-}" ] || [ -e /proc/sys/fs/binfmt_misc/WSLInterop ]; then
+    timeout 600 ./.build-win/tst/test.exe --top=20
+else
+    echo "built: run .build-win/tst/test.exe on Windows" >&2
+fi

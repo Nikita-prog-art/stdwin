@@ -48,5 +48,11 @@ void* stl::formatU64Base16(u64 v, void* ptr) noexcept {
 }
 
 void* stl::formatLongDouble(long double v, void* buf) noexcept {
+#if defined(_WIN32)
+    // UCRT's %Lf prints zeros for long double; on Win64 long double is just
+    // the 64-bit double, so %f is both correct and portable there
+    return advancePtr(buf, sprintf((char*)buf, "%f", (double)v));
+#else
     return advancePtr(buf, sprintf((char*)buf, "%Lf", v));
+#endif
 }

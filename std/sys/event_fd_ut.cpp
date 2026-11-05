@@ -2,16 +2,16 @@
 
 #include <std/tst/ut.h>
 #include <std/dbg/insist.h>
-
-#include <poll.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
 static bool isReadable(int fd) {
-    struct pollfd pfd {};
+    StdPollFD pfd {};
     pfd.fd = fd;
-    pfd.events = POLLIN;
-    return poll(&pfd, 1, 0) > 0;
+    pfd.events = stdPollIn;
+
+    return stdPoll(&pfd, 1, 0) > 0;
 }
 
 STD_TEST_SUITE(EventFD) {

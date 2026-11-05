@@ -2,6 +2,7 @@
 
 #include <std/mem/new.h>
 #include <std/dbg/insist.h>
+#include <std/sys/plat.h>
 #include <std/thr/runable.h>
 #include <std/alg/exchange.h>
 
@@ -68,7 +69,187 @@ namespace {
     };
 }
 
-#if defined(__x86_64__)
+#if defined(_WIN32) && defined(__x86_64__)
+namespace {
+    struct ContextImpl: public ContextBase, public AsanFiberState {
+        u64 rsp = 0;
+        u64 stackBase_ = 0;
+        u64 stackLimit_ = 0;
+        __cxxabiv1::__cxa_eh_globals ehg_;
+        Runable* entry_ = nullptr;
+
+        ContextImpl() noexcept;
+        ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept;
+
+        void switchTo(Context& target) noexcept override;
+
+        __attribute__((naked, noinline)) static void swapContext(u64*, u64*);
+
+        [[noreturn]]
+        static void trampoline();
+    };
+
+    extern "C" [[noreturn]] void contextEntry(ContextImpl* self);
+
+    // The Windows SEH dispatcher validates exception frames against the
+    // current thread's TEB stack bounds, so a coroutine running on its own
+    // stack must publish that stack while it is active. NT_TIB lives at
+    // gs:0 (StackBase at +8, StackLimit at +16) on x64.
+    u64 readTebStackBase() noexcept {
+        u64 value;
+
+        __asm__ volatile("movq %%gs:8, %0" : "=r"(value));
+
+        return value;
+    }
+
+    u64 readTebStackLimit() noexcept {
+        u64 value;
+
+        __asm__ volatile("movq %%gs:16, %0" : "=r"(value));
+
+        return value;
+    }
+
+    void writeTebStackBase(u64 value) noexcept {
+        __asm__ volatile("movq %0, %%gs:8" ::"r"(value) : "memory");
+    }
+
+    void writeTebStackLimit(u64 value) noexcept {
+        __asm__ volatile("movq %0, %%gs:16" ::"r"(value) : "memory");
+    }
+}
+
+ContextImpl::ContextImpl() noexcept {
+    stackBase_ = readTebStackBase();
+    stackLimit_ = readTebStackLimit();
+}
+
+// Windows x64 ABI: callee-saved state is rbx, rbp, rdi, rsi, r12-r15 plus
+// xmm6-xmm15, MXCSR and the x87 control word; the first two arguments arrive
+// in rcx/rdx. The frame laid out here is what swapContext restores:
+//
+//   xmm6..xmm15 (160) | mxcsr (4) | x87cw (2) | pad (10)
+//   r15 r14 r13 r12 rdi rsi rbp rbx
+//   return address -> trampoline (rbx holds this)
+void ContextImpl::swapContext(u64*, u64*) {
+    __asm__(
+        "pushq %rbx\n\t"
+        "pushq %rbp\n\t"
+        "pushq %rsi\n\t"
+        "pushq %rdi\n\t"
+        "pushq %r12\n\t"
+        "pushq %r13\n\t"
+        "pushq %r14\n\t"
+        "pushq %r15\n\t"
+        "subq $176, %rsp\n\t"
+        "movdqu %xmm6,   0(%rsp)\n\t"
+        "movdqu %xmm7,  16(%rsp)\n\t"
+        "movdqu %xmm8,  32(%rsp)\n\t"
+        "movdqu %xmm9,  48(%rsp)\n\t"
+        "movdqu %xmm10, 64(%rsp)\n\t"
+        "movdqu %xmm11, 80(%rsp)\n\t"
+        "movdqu %xmm12, 96(%rsp)\n\t"
+        "movdqu %xmm13, 112(%rsp)\n\t"
+        "movdqu %xmm14, 128(%rsp)\n\t"
+        "movdqu %xmm15, 144(%rsp)\n\t"
+        "stmxcsr 160(%rsp)\n\t"
+        "fnstcw   164(%rsp)\n\t"
+        "movq %rsp, (%rcx)\n\t"
+        "movq (%rdx), %rsp\n\t"
+        "movdqu   0(%rsp), %xmm6\n\t"
+        "movdqu  16(%rsp), %xmm7\n\t"
+        "movdqu  32(%rsp), %xmm8\n\t"
+        "movdqu  48(%rsp), %xmm9\n\t"
+        "movdqu  64(%rsp), %xmm10\n\t"
+        "movdqu  80(%rsp), %xmm11\n\t"
+        "movdqu  96(%rsp), %xmm12\n\t"
+        "movdqu 112(%rsp), %xmm13\n\t"
+        "movdqu 128(%rsp), %xmm14\n\t"
+        "movdqu 144(%rsp), %xmm15\n\t"
+        "ldmxcsr 160(%rsp)\n\t"
+        "fldcw    164(%rsp)\n\t"
+        "addq $176, %rsp\n\t"
+        "popq %r15\n\t"
+        "popq %r14\n\t"
+        "popq %r13\n\t"
+        "popq %r12\n\t"
+        "popq %rdi\n\t"
+        "popq %rsi\n\t"
+        "popq %rbp\n\t"
+        "popq %rbx\n\t"
+        "retq\n\t");
+}
+
+// entered by ret from swapContext: rsp is 8-mod-16, exactly as after a call
+__attribute__((naked, noinline)) void ContextImpl::trampoline() {
+    __asm__(
+        "movq %rbx, %rcx\n\t"
+        "jmp contextEntry\n\t");
+}
+
+namespace {
+    extern "C" [[noreturn]] void contextEntry(ContextImpl* self) {
+        self->afterSwitch();
+        self->entry_->run();
+
+        STD_INSIST(false);
+        __builtin_unreachable();
+    }
+}
+
+ContextImpl::ContextImpl(void* stackPtr, size_t stackSize, Runable& entry) noexcept {
+    entry_ = &entry;
+
+    auto top = (u8*)(((uintptr_t)stackPtr + stackSize) & ~(uintptr_t)15);
+
+    // frame: 176 bytes of xmm/mxcsr/cw, 8 general registers, then the
+    // trampoline return address at a 16-aligned slot (minus 16 bytes slack)
+    auto frame = top - 256;
+
+    for (size_t i = 0; i < 256; ++i) {
+        frame[i] = 0;
+    }
+
+    auto regs = (u64*)(frame + 176);
+
+    regs[0] = 0;          // r15
+    regs[1] = 0;          // r14
+    regs[2] = 0;          // r13
+    regs[3] = 0;          // r12
+    regs[4] = 0;          // rdi
+    regs[5] = 0;          // rsi
+    regs[6] = 0;          // rbp
+    regs[7] = (u64)this;  // rbx
+
+    *(u64*)(frame + 240) = (u64)trampoline;
+
+    // default MXCSR and x87 control word, as a fresh thread would have them
+    *(u32*)(frame + 160) = 0x1f80;
+    *(u16*)(frame + 164) = 0x027f;
+
+    rsp = (u64)frame;
+    stackBase_ = (u64)top;
+    stackLimit_ = (u64)stackPtr;
+    initStack(stackPtr, stackSize);
+}
+
+void ContextImpl::switchTo(Context& target) noexcept {
+    auto& t = (ContextImpl&)target;
+    ehg_ = exchange(*__cxxabiv1::__cxa_get_globals(), t.ehg_);
+    beforeSwitch(t);
+
+    writeTebStackBase(t.stackBase_);
+    writeTebStackLimit(t.stackLimit_);
+
+    swapContext(&rsp, &t.rsp);
+
+    writeTebStackBase(stackBase_);
+    writeTebStackLimit(stackLimit_);
+
+    afterSwitch();
+}
+#elif defined(__x86_64__)
 namespace {
     struct ContextImpl: public ContextBase, public AsanFiberState {
         u64 rsp = 0;

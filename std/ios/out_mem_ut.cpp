@@ -387,7 +387,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         FDInput fdInput(readEnd);
         writeEnd.close();
         u8 buffer[10] = {0};
-        MemoryOutput output(buffer);
+        MemoryOutput output(buffer, sizeof(buffer));
         copy(fdInput, output);
         STD_INSIST(output.ptr == buffer);
     }
@@ -401,7 +401,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         writeEnd.close();
         FDInput fdInput(readEnd);
         u8 buffer[10] = {0};
-        MemoryOutput output(buffer);
+        MemoryOutput output(buffer, sizeof(buffer));
         copy(fdInput, output);
         STD_INSIST(output.ptr == buffer + 5);
         STD_INSIST(memcmp(buffer, "hello", 5) == 0);
@@ -417,7 +417,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         writeEnd.close();
         FDInput fdInput(readEnd);
         u8 buffer[100] = {0};
-        MemoryOutput output(buffer);
+        MemoryOutput output(buffer, sizeof(buffer));
         copy(fdInput, output);
         STD_INSIST(output.ptr == buffer + len);
         STD_INSIST(memcmp(buffer, testData, len) == 0);
@@ -439,7 +439,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         Vector<u8> buffer;
         buffer.grow(bufSize);
         memset(buffer.mutData(), 0, bufSize);
-        MemoryOutput output(buffer.mutData());
+        MemoryOutput output(buffer.mutData(), bufSize);
         copy(fdInput, output);
         STD_INSIST(output.ptr == buffer.data() + bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
@@ -456,7 +456,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         writeEnd.close();
         FDInput fdInput(readEnd);
         u8 buffer[10] = {0};
-        MemoryOutput output(buffer);
+        MemoryOutput output(buffer, sizeof(buffer));
         copy(fdInput, output);
         STD_INSIST(output.ptr == buffer + sizeof(testData));
         STD_INSIST(memcmp(buffer, testData, sizeof(testData)) == 0);
@@ -471,7 +471,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         writeEnd.close();
         FDInput fdInput(readEnd);
         u8 buffer = 0;
-        MemoryOutput output(&buffer);
+        MemoryOutput output(&buffer, 1);
         copy(fdInput, output);
         STD_INSIST(buffer == 0xCD);
     }
@@ -489,7 +489,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         writeEnd.close();
         FDInput fdInput(readEnd);
         u8 buffer[20] = {0};
-        MemoryOutput output(buffer);
+        MemoryOutput output(buffer, sizeof(buffer));
         copy(fdInput, output);
         STD_INSIST(output.ptr == buffer + 11);
         STD_INSIST(memcmp(buffer, "Hello World", 11) == 0);
@@ -505,7 +505,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         FDInput fdInput(readEnd);
         u8 buffer[100];
         memset(buffer, 0xFF, 100);
-        MemoryOutput output(buffer);
+        MemoryOutput output(buffer, sizeof(buffer));
         copy(fdInput, output);
         STD_INSIST(output.ptr == buffer + 100);
         for (size_t i = 0; i < 100; ++i) {
@@ -525,7 +525,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         writeEnd.close();
         FDInput fdInput(readEnd);
         u8 buffer[50] = {0};
-        MemoryOutput output(buffer);
+        MemoryOutput output(buffer, sizeof(buffer));
         copy(fdInput, output);
         STD_INSIST(output.ptr == buffer + 50);
         for (size_t i = 0; i < 50; ++i) {
@@ -546,7 +546,7 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         writeEnd.close();
         FDInput fdInput(readEnd);
         u8 buffer[bufSize] = {0};
-        MemoryOutput output(buffer);
+        MemoryOutput output(buffer, sizeof(buffer));
         copy(fdInput, output);
         STD_INSIST(output.ptr == buffer + bufSize);
         for (size_t i = 0; i < bufSize; ++i) {
@@ -569,8 +569,8 @@ STD_TEST_SUITE(MemoryOutputWithFDInput) {
         FDInput fdInput2(readEnd2);
         u8 buffer1[20] = {0};
         u8 buffer2[20] = {0};
-        MemoryOutput output1(buffer1);
-        MemoryOutput output2(buffer2);
+        MemoryOutput output1(buffer1, sizeof(buffer1));
+        MemoryOutput output2(buffer2, sizeof(buffer2));
         copy(fdInput1, output1);
         copy(fdInput2, output2);
         STD_INSIST(output1.ptr == buffer1 + strlen(msg1));

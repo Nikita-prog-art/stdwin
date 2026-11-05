@@ -11,7 +11,7 @@
 #include <std/net/ssl_socket.h>
 #include <std/thr/wait_group.h>
 
-#include <netinet/in.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

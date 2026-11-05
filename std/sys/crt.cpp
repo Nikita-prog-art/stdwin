@@ -2,10 +2,14 @@
 
 #include <std/dbg/insist.h>
 #include <std/ios/output.h>
+#include <std/sys/plat.h>
 
-#include <time.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if !defined(_WIN32)
+    #include <time.h>
+#endif
 
 void* stl::allocateMemory(size_t len) {
     if (auto ret = malloc(len); ret) {
@@ -51,10 +55,28 @@ void stl::memZero(void* from, void* to) noexcept {
 
 #ifndef STL_EXTERNAL_MONOTONIC_NOW_US
 u64 stl::monotonicNowUs() noexcept {
+#if defined(_WIN32)
+    static const u64 freq = [] {
+        LARGE_INTEGER value;
+
+        QueryPerformanceFrequency(&value);
+
+        return (u64)value.QuadPart;
+    }();
+
+    LARGE_INTEGER counter;
+
+    QueryPerformanceCounter(&counter);
+
+    const auto ticks = (u64)counter.QuadPart;
+
+    return (ticks / freq) * 1000000ULL + (ticks % freq) * 1000000ULL / freq;
+#else
     timespec ts;
 
     clock_gettime(CLOCK_MONOTONIC, &ts);
 
     return (u64)ts.tv_sec * 1000000ULL + (u64)ts.tv_nsec / 1000;
+#endif
 }
 #endif

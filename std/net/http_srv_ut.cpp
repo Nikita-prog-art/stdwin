@@ -20,11 +20,9 @@
 #include <std/ios/stream_tcp.h>
 #include <std/ios/in_fd_coro.h>
 
-#include <fcntl.h>
+#include <std/sys/plat.h>
 #include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+
 
 using namespace stl;
 

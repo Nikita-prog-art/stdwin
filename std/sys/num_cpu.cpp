@@ -3,12 +3,11 @@
 #include <std/str/view.h>
 #include <std/lib/buffer.h>
 #include <std/ios/fs_utils.h>
+#include <std/sys/plat.h>
 
 #include <stdlib.h>
 
-#if defined(__linux__)
-    #include <sched.h>
-#elif defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
     #include <sys/sysctl.h>
 #endif
 
@@ -92,6 +91,12 @@ namespace {
         }
 
         return 1;
+    }
+#elif defined(_WIN32)
+    static u32 fromOs() noexcept {
+        DWORD n = GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+
+        return n > 0 ? (u32)n : 1;
     }
 #else
     static u32 fromOs() noexcept {

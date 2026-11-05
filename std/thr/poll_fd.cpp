@@ -1,6 +1,6 @@
 #include "poll_fd.h"
 
-#include <poll.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
@@ -58,6 +58,15 @@ u32 PollFD::fromPollEvents(short events) noexcept {
     if (events & POLLHUP) {
         r |= PollFlag::Hup;
     }
+
+#if defined(_WIN32)
+    // WSAPoll reports a peer shutdown as POLLHUP alone and a failed connect as
+    // POLLERR alone; POSIX poll also sets POLLIN/POLLOUT for those, and the
+    // reactor matches events against requested flags.
+    if (r & (PollFlag::Err | PollFlag::Hup)) {
+        r |= PollFlag::In | PollFlag::Out;
+    }
+#endif
 
     return r;
 }

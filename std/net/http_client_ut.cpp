@@ -19,9 +19,7 @@
 #include <std/thr/wait_group.h>
 #include <std/ios/stream_tcp.h>
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

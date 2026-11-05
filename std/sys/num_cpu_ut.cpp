@@ -5,6 +5,7 @@
 #include <std/mem/obj_pool.h>
 #include <std/thr/guard.h>
 #include <std/dbg/insist.h>
+#include <std/sys/plat.h>
 
 #include <stdlib.h>
 

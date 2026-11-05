@@ -5,8 +5,7 @@
 #include <std/ios/out_zc.h>
 #include <std/ios/outable.h>
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

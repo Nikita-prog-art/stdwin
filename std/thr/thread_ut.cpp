@@ -10,13 +10,13 @@
 #include <std/lib/vector.h>
 #include <std/mem/obj_pool.h>
 
-#include <unistd.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
 namespace {
     size_t pageSize() {
-        auto size = sysconf(_SC_PAGESIZE);
+        auto size = stdPageSize();
 
         STD_INSIST(size > 0);
 

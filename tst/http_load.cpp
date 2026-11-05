@@ -23,8 +23,7 @@
 #include <std/net/http_client.h>
 #include <std/net/http_reason.h>
 
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

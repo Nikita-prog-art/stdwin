@@ -10,8 +10,7 @@
 #include <std/net/tcp_socket.h>
 
 #include <string.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
@@ -39,7 +38,7 @@ STD_TEST_SUITE(TcpStream) {
         };
 
         int opt = 1;
-        ::setsockopt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        stdSetSockOpt(srv.fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
         auto addr = makeAddr(17660);
         STD_INSIST(srv.bind((sockaddr*)&addr, sizeof(addr)) == 0);

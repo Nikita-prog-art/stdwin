@@ -4,16 +4,75 @@
 #include "runable.h"
 
 #include <std/str/view.h>
+#include <std/sys/plat.h>
 #include <std/sys/throw.h>
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
 #include <std/mem/obj_pool.h>
 
-#include <pthread.h>
-
 using namespace stl;
 
 namespace {
+#if defined(_WIN32)
+    struct WinThreadImpl: public Thread {
+        HANDLE handle_ = nullptr;
+        Runable* runable_ = nullptr;
+        void* stack_ = nullptr;
+        size_t stackSize_ = 0;
+
+        static DWORD WINAPI entry(void* arg) {
+            ((WinThreadImpl*)arg)->runable_->run();
+
+            return 0;
+        }
+
+        static void runEntry(void* arg) {
+            ((WinThreadImpl*)arg)->runable_->run();
+        }
+
+        static DWORD WINAPI stackEntry(void* arg) {
+            auto self = (WinThreadImpl*)arg;
+
+            stdRunOnStack((char*)self->stack_ + self->stackSize_, runEntry, self);
+
+            return 0;
+        }
+
+        void start(Runable& runable) override {
+            runable_ = &runable;
+            handle_ = CreateThread(nullptr, 0, entry, this, 0, nullptr);
+
+            if (!handle_) {
+                Errno().raise(StringBuilder() << StringView(u8"CreateThread failed"));
+            }
+        }
+
+        void startWithStack(Runable& runable, void* stack, size_t stackSize) {
+            runable_ = &runable;
+            stack_ = stack;
+            stackSize_ = stackSize;
+            handle_ = CreateThread(nullptr, 0, stackEntry, this, 0, nullptr);
+
+            if (!handle_) {
+                Errno().raise(StringBuilder() << StringView(u8"CreateThread failed"));
+            }
+        }
+
+        void join() noexcept override {
+            if (!handle_) {
+                return;
+            }
+
+            WaitForSingleObject(handle_, INFINITE);
+            CloseHandle(handle_);
+            handle_ = nullptr;
+        }
+
+        u64 threadId() const noexcept override {
+            return (u64)GetThreadId(handle_);
+        }
+    };
+#else
     struct PosixThreadImpl: public Thread {
         pthread_t thread_;
 
@@ -33,8 +92,10 @@ namespace {
             return (u64)thread_;
         }
     };
+#endif
 }
 
+#if !defined(_WIN32)
 void PosixThreadImpl::start(Runable& runable) {
     if (pthread_create(&thread_, nullptr, threadFunc, &runable)) {
         Errno().raise(StringBuilder() << StringView(u8"pthread_create failed"));
@@ -61,13 +122,22 @@ void PosixThreadImpl::startWithStack(Runable& runable, void* stack, size_t stack
         Errno(rc).raise(StringBuilder() << StringView(u8"pthread_create failed"));
     }
 }
+#endif
 
 u64 Thread::currentThreadId() noexcept {
+#if defined(_WIN32)
+    return (u64)GetCurrentThreadId();
+#else
     return (u64)pthread_self();
+#endif
 }
 
 Thread* Thread::create(ObjPool* pool, Runable& runable) {
+#if defined(_WIN32)
+    auto t = pool->make<WinThreadImpl>();
+#else
     auto t = pool->make<PosixThreadImpl>();
+#endif
 
     t->start(runable);
 
@@ -83,7 +153,11 @@ Thread* Thread::create(ObjPool* pool, CoroExecutor* exec, Runable& runable) {
 }
 
 Thread* Thread::create(ObjPool* pool, Runable& runable, void* stack, size_t stackSize) {
+#if defined(_WIN32)
+    auto t = pool->make<WinThreadImpl>();
+#else
     auto t = pool->make<PosixThreadImpl>();
+#endif
 
     t->startWithStack(runable, stack, stackSize);
 

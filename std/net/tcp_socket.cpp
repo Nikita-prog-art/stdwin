@@ -2,46 +2,17 @@
 
 #include <std/sys/fd.h>
 #include <std/sys/crt.h>
+#include <std/sys/plat.h>
 #include <std/thr/coro.h>
 #include <std/thr/poll_fd.h>
 #include <std/mem/obj_pool.h>
 #include <std/thr/io_reactor.h>
 
-#include <fcntl.h>
-#include <errno.h>
-#include <unistd.h>
-#include <sys/uio.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-
-#ifndef SOCK_NONBLOCK
-    #define SOCK_NONBLOCK 0
-    #define STD_SOCK_EMULATE_NB 1
-#endif
-
-#ifndef SOCK_CLOEXEC
-    #define SOCK_CLOEXEC 0
-    #define STD_SOCK_EMULATE_CE 1
-#endif
-
-#ifndef MSG_NOSIGNAL
-    #define MSG_NOSIGNAL 0
-#endif
-
 using namespace stl;
 
 namespace {
     void setSockFlags([[maybe_unused]] int fd) {
-#ifdef STD_SOCK_EMULATE_NB
-        ::fcntl(fd, F_SETFL, ::fcntl(fd, F_GETFL) | O_NONBLOCK);
-#endif
-
-#ifdef STD_SOCK_EMULATE_CE
-        ::fcntl(fd, F_SETFD, ::fcntl(fd, F_GETFD) | FD_CLOEXEC);
-#endif
-
-#ifdef SO_NOSIGPIPE
+#if !defined(_WIN32) && defined(SO_NOSIGPIPE)
         int one = 1;
         ::setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
 #endif
@@ -56,7 +27,7 @@ TcpSocket::TcpSocket(int fd, CoroExecutor* exec) noexcept
 }
 
 int TcpSocket::socket(int* out, int domain, int type, int protocol) {
-    int fd = ::socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol);
+    int fd = stdSocket(domain, type, protocol);
 
     if (fd < 0) {
         return errno;
@@ -70,19 +41,19 @@ int TcpSocket::socket(int* out, int domain, int type, int protocol) {
 
 void TcpSocket::close() {
     if (fd >= 0) {
-        ::close(fd);
+        stdClose(fd);
         fd = -1;
     }
 }
 
 void TcpSocket::shutdown(int how) {
-    ::shutdown(fd, how);
+    stdShutdown(fd, how);
 }
 
 int TcpSocket::setReuseAddr(bool on) {
     int opt = on ? 1 : 0;
 
-    if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    if (stdSetSockOpt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         return errno;
     }
 
@@ -92,7 +63,7 @@ int TcpSocket::setReuseAddr(bool on) {
 int TcpSocket::setNoDelay(bool on) {
     int opt = on ? 1 : 0;
 
-    if (::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0) {
+    if (stdSetSockOpt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0) {
         return errno;
     }
 
@@ -100,7 +71,7 @@ int TcpSocket::setNoDelay(bool on) {
 }
 
 int TcpSocket::bind(const sockaddr* addr, u32 addrLen) {
-    if (int r = ::bind(fd, addr, addrLen); r < 0) {
+    if (int r = stdBind(fd, addr, addrLen); r < 0) {
         return errno;
     }
 
@@ -108,7 +79,7 @@ int TcpSocket::bind(const sockaddr* addr, u32 addrLen) {
 }
 
 int TcpSocket::listen(int backlog) {
-    if (int r = ::listen(fd, backlog); r < 0) {
+    if (int r = stdListen(fd, backlog); r < 0) {
         return errno;
     }
 
@@ -116,7 +87,7 @@ int TcpSocket::listen(int backlog) {
 }
 
 int TcpSocket::connect(int* out, CoroExecutor* exec, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
-    int fd = ::socket(addr->sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    int fd = stdSocket(addr->sa_family, SOCK_STREAM, 0);
 
     if (fd < 0) {
         return errno;
@@ -125,7 +96,7 @@ int TcpSocket::connect(int* out, CoroExecutor* exec, const sockaddr* addr, u32 a
     setSockFlags(fd);
 
     if (int r = exec->io()->connect(fd, addr, addrLen, deadlineUs)) {
-        ::close(fd);
+        stdClose(fd);
         return r;
     }
 
@@ -201,7 +172,7 @@ bool TcpSocket::peek(u8& out) {
         return false;
     }
 
-    return ::recv(fd, &out, 1, MSG_PEEK) == 1;
+    return stdRecv(fd, &out, 1, MSG_PEEK) == 1;
 }
 
 TcpSocket* TcpSocket::create(ObjPool* pool, int fd, CoroExecutor* exec) {

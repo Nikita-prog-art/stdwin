@@ -3,10 +3,9 @@
 
 #include <std/tst/ut.h>
 
-#include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/uio.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
@@ -23,14 +22,14 @@ STD_TEST_SUITE(FD) {
         size_t written = fdWrapper.write(testData, len);
         STD_INSIST(written == len);
 
-        lseek(fd, 0, SEEK_SET);
+        stdSeek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
         size_t readBytes = fdWrapper.read(readBuf, len);
         STD_INSIST(readBytes == len);
         STD_INSIST(memcmp(readBuf, testData, len) == 0);
 
-        close(fd);
+        stdClose(fd);
     }
 
     STD_TEST(ReadEmptyMemFd) {
@@ -43,7 +42,7 @@ STD_TEST_SUITE(FD) {
         size_t readBytes = fdWrapper.read(readBuf, sizeof(readBuf));
         STD_INSIST(readBytes == 0);
 
-        close(fd);
+        stdClose(fd);
     }
 
     STD_TEST(WriteMultipleChunksMemFd) {
@@ -60,7 +59,7 @@ STD_TEST_SUITE(FD) {
         fdWrapper.write(chunk2, strlen(chunk2));
         fdWrapper.write(chunk3, strlen(chunk3));
 
-        lseek(fd, 0, SEEK_SET);
+        stdSeek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
         size_t totalRead = fdWrapper.read(readBuf, sizeof(readBuf));
@@ -68,7 +67,7 @@ STD_TEST_SUITE(FD) {
         STD_INSIST(totalRead == strlen(chunk1) + strlen(chunk2) + strlen(chunk3));
         STD_INSIST(strcmp(readBuf, "First Second Third") == 0);
 
-        close(fd);
+        stdClose(fd);
     }
 
     STD_TEST(WriteVectorMemFd) {
@@ -92,13 +91,13 @@ STD_TEST_SUITE(FD) {
         size_t written = fdWrapper.writeV(iov, 3);
         STD_INSIST(written == strlen(part1) + strlen(part2) + strlen(part3));
 
-        lseek(fd, 0, SEEK_SET);
+        stdSeek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
         (void)fdWrapper.read(readBuf, sizeof(readBuf));
         STD_INSIST(strcmp(readBuf, "Hello World") == 0);
 
-        close(fd);
+        stdClose(fd);
     }
 
     STD_TEST(FsyncMemFd) {
@@ -112,7 +111,7 @@ STD_TEST_SUITE(FD) {
 
         fdWrapper.fsync();
 
-        close(fd);
+        stdClose(fd);
     }
 
     STD_TEST(PipeReadWrite) {
@@ -191,7 +190,7 @@ STD_TEST_SUITE(FD) {
         size_t written = fdWrapper.write(writeBuf, bufSize);
         STD_INSIST(written == bufSize);
 
-        lseek(fd, 0, SEEK_SET);
+        stdSeek(fd, 0, SEEK_SET);
 
         u8* readBuf = (u8*)malloc(bufSize);
         size_t readBytes = fdWrapper.read(readBuf, bufSize);
@@ -203,7 +202,7 @@ STD_TEST_SUITE(FD) {
 
         free(writeBuf);
         free(readBuf);
-        close(fd);
+        stdClose(fd);
     }
 }
 
@@ -229,7 +228,7 @@ STD_TEST_SUITE(ScopedFD) {
         size_t len = strlen(testData);
 
         scoped.write(testData, len);
-        lseek(fd, 0, SEEK_SET);
+        stdSeek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
         size_t readBytes = scoped.read(readBuf, len);
@@ -271,7 +270,7 @@ STD_TEST_SUITE(ScopedFD) {
         size_t written = scoped.writeV(iov, 3);
         STD_INSIST(written == 3);
 
-        lseek(fd, 0, SEEK_SET);
+        stdSeek(fd, 0, SEEK_SET);
 
         char readBuf[64] = {0};
         scoped.read(readBuf, 3);

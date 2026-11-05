@@ -28,12 +28,10 @@
 #include <std/alg/destruct.h>
 #include <std/mem/obj_pool.h>
 
+#include <std/sys/plat.h>
+
 #include <errno.h>
 #include <time.h>
-#include <fcntl.h>
-#include <sched.h>
-#include <alloca.h>
-#include <unistd.h>
 
 using namespace stl;
 
@@ -103,7 +101,7 @@ namespace {
         ScopedFD w;
 
         JoinPipe() {
-            createPipeFD(r, w);
+            createSocketPairFD(r, w);
             w.setNonBlocking();
         }
     };

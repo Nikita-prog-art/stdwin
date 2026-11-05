@@ -13,23 +13,9 @@
 #include <std/mem/obj_pool.h>
 #include <std/rng/split_mix_64.h>
 
+#include <std/sys/plat.h>
+
 #include <errno.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/uio.h>
-#include <sys/socket.h>
-
-#ifndef MSG_NOSIGNAL
-    #define MSG_NOSIGNAL 0
-#endif
-
-#ifndef SOCK_NONBLOCK
-    #define SOCK_NONBLOCK 0
-#endif
-
-#ifndef SOCK_CLOEXEC
-    #define SOCK_CLOEXEC 0
-#endif
 
 using namespace stl;
 
@@ -88,7 +74,7 @@ PollIoReactor::PollIoReactor(ObjPool* pool, CoroExecutor* exec, size_t reactors)
 
 int PollIoReactor::recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
     for (;;) {
-        ssize_t n = ::recv(fd, buf, len, 0);
+        ssize_t n = stdRecv(fd, buf, len, 0);
 
         if (n >= 0) {
             *nRead = (size_t)n;
@@ -108,7 +94,7 @@ int PollIoReactor::recv(int fd, size_t* nRead, void* buf, size_t len, u64 deadli
 int PollIoReactor::recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockaddr* addr, u32* addrLen, u64 deadlineUs) {
     for (;;) {
         socklen_t slen = addrLen ? (socklen_t)*addrLen : 0;
-        ssize_t n = ::recvfrom(fd, buf, len, 0, addr, addrLen ? &slen : nullptr);
+        ssize_t n = stdRecvFrom(fd, buf, len, 0, addr, addrLen ? &slen : nullptr);
 
         if (n >= 0) {
             *nRead = (size_t)n;
@@ -131,6 +117,10 @@ int PollIoReactor::recvfrom(int fd, size_t* nRead, void* buf, size_t len, sockad
 }
 
 int PollIoReactor::recvmsg(int fd, msghdr* msg, int flags, size_t* nRead, u64 deadlineUs) {
+#if defined(_WIN32)
+    (void)fd; (void)msg; (void)flags; (void)nRead; (void)deadlineUs;
+    return ENOTSUP;
+#else
     for (;;) {
         ssize_t n = ::recvmsg(fd, msg, flags);
 
@@ -147,6 +137,7 @@ int PollIoReactor::recvmsg(int fd, msghdr* msg, int flags, size_t* nRead, u64 de
             return EAGAIN;
         }
     }
+#endif
 }
 
 int PollIoReactor::recvmmsg(int fd, mmsghdr* msgs, unsigned vlen, int flags, unsigned* nMsgs, u64 deadlineUs) {
@@ -175,7 +166,7 @@ int PollIoReactor::recvmmsg(int fd, mmsghdr* msgs, unsigned vlen, int flags, uns
 
 int PollIoReactor::send(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
     for (;;) {
-        ssize_t n = ::send(fd, buf, len, MSG_NOSIGNAL);
+        ssize_t n = stdSend(fd, buf, len, MSG_NOSIGNAL);
 
         if (n >= 0) {
             *nWritten = (size_t)n;
@@ -194,7 +185,7 @@ int PollIoReactor::send(int fd, size_t* nWritten, const void* buf, size_t len, u
 
 int PollIoReactor::sendto(int fd, size_t* nWritten, const void* buf, size_t len, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
     for (;;) {
-        ssize_t n = ::sendto(fd, buf, len, MSG_NOSIGNAL, addr, addrLen);
+        ssize_t n = stdSendTo(fd, buf, len, MSG_NOSIGNAL, addr, addrLen);
 
         if (n >= 0) {
             *nWritten = (size_t)n;
@@ -212,6 +203,10 @@ int PollIoReactor::sendto(int fd, size_t* nWritten, const void* buf, size_t len,
 }
 
 int PollIoReactor::sendmsg(int fd, const msghdr* msg, int flags, size_t* nWritten, u64 deadlineUs) {
+#if defined(_WIN32)
+    (void)fd; (void)msg; (void)flags; (void)nWritten; (void)deadlineUs;
+    return ENOTSUP;
+#else
     for (;;) {
         ssize_t n = ::sendmsg(fd, msg, flags | MSG_NOSIGNAL);
 
@@ -228,11 +223,12 @@ int PollIoReactor::sendmsg(int fd, const msghdr* msg, int flags, size_t* nWritte
             return EAGAIN;
         }
     }
+#endif
 }
 
 int PollIoReactor::read(int fd, size_t* nRead, void* buf, size_t len, u64 deadlineUs) {
     for (;;) {
-        ssize_t n = ::read(fd, buf, len);
+        ssize_t n = stdRead(fd, buf, len);
 
         if (n >= 0) {
             *nRead = (size_t)n;
@@ -251,7 +247,7 @@ int PollIoReactor::read(int fd, size_t* nRead, void* buf, size_t len, u64 deadli
 
 int PollIoReactor::write(int fd, size_t* nWritten, const void* buf, size_t len, u64 deadlineUs) {
     for (;;) {
-        ssize_t n = ::write(fd, buf, len);
+        ssize_t n = stdWrite(fd, buf, len);
 
         if (n >= 0) {
             *nWritten = (size_t)n;
@@ -270,7 +266,7 @@ int PollIoReactor::write(int fd, size_t* nWritten, const void* buf, size_t len, 
 
 int PollIoReactor::writev(int fd, size_t* nWritten, iovec* iov, size_t iovcnt, u64 deadlineUs) {
     for (;;) {
-        ssize_t n = ::writev(fd, iov, iovcnt);
+        ssize_t n = stdWriteV(fd, iov, iovcnt);
 
         if (n >= 0) {
             *nWritten = (size_t)n;
@@ -291,11 +287,7 @@ int PollIoReactor::accept(int fd, int* newFd, sockaddr* addr, u32* addrLen, u64 
     for (;;) {
         socklen_t slen = addrLen ? (socklen_t)*addrLen : 0;
 
-#ifdef __linux__
-        int r = ::accept4(fd, addr, addrLen ? &slen : nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
-#else
-        int r = ::accept(fd, addr, addrLen ? &slen : nullptr);
-#endif
+        int r = stdAccept(fd, addr, addrLen ? &slen : nullptr);
 
         if (r >= 0) {
             if (addrLen) {
@@ -318,7 +310,7 @@ int PollIoReactor::accept(int fd, int* newFd, sockaddr* addr, u32* addrLen, u64 
 }
 
 int PollIoReactor::connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadlineUs) {
-    if (int r = ::connect(fd, addr, addrLen); r == 0) {
+    if (int r = stdConnect(fd, addr, addrLen); r == 0) {
         return 0;
     } else if (errno != EINPROGRESS) {
         return errno;
@@ -329,7 +321,7 @@ int PollIoReactor::connect(int fd, const sockaddr* addr, u32 addrLen, u64 deadli
     int err = 0;
     socklen_t len = sizeof(err);
 
-    if (::getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0) {
+    if (stdGetSockOpt(fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0) {
         return errno;
     }
 
@@ -340,7 +332,7 @@ int PollIoReactor::pread(int fd, size_t* nRead, void* buf, size_t len, off_t off
     int result = 0;
 
     exec_->offload(offload_, [&] {
-        ssize_t n = ::pread(fd, buf, len, offset);
+        ssize_t n = stdPread(fd, buf, len, offset);
 
         if (n < 0) {
             result = errno;
@@ -356,7 +348,7 @@ int PollIoReactor::pwrite(int fd, size_t* nWritten, const void* buf, size_t len,
     int result = 0;
 
     exec_->offload(offload_, [&] {
-        ssize_t n = ::pwrite(fd, buf, len, offset);
+        ssize_t n = stdPwrite(fd, buf, len, offset);
 
         if (n < 0) {
             result = errno;
@@ -372,7 +364,7 @@ int PollIoReactor::fsync(int fd) {
     int result = 0;
 
     exec_->offload(offload_, [&] {
-        if (::fsync(fd) < 0) {
+        if (stdFsync(fd) < 0) {
             result = errno;
         }
     });
@@ -383,19 +375,11 @@ int PollIoReactor::fsync(int fd) {
 int PollIoReactor::fdatasync(int fd) {
     int result = 0;
 
-    // clang-format off
     exec_->offload(offload_, [&] {
-#if defined(__APPLE__)
-        if (::fcntl(fd, F_FULLFSYNC) < 0) {
+        if (stdFdatasync(fd) < 0) {
             result = errno;
         }
-#else
-        if (::fdatasync(fd) < 0) {
-            result = errno;
-        }
-#endif
     });
-    // clang-format on
 
     return result;
 }

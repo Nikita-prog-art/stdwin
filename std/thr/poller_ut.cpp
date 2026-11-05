@@ -29,7 +29,7 @@ STD_TEST_SUITE(Poller) {
         auto pool = ObjPool::fromMemory();
         auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
-        createPipeFD(r, w);
+        createSocketPairFD(r, w);
 
         p->arm({w.get(), PollFlag::Out});
 
@@ -47,7 +47,7 @@ STD_TEST_SUITE(Poller) {
         auto pool = ObjPool::fromMemory();
         auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
-        createPipeFD(r, w);
+        createSocketPairFD(r, w);
 
         p->arm({r.get(), PollFlag::In});
 
@@ -68,7 +68,7 @@ STD_TEST_SUITE(Poller) {
         auto pool = ObjPool::fromMemory();
         auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
-        createPipeFD(r, w);
+        createSocketPairFD(r, w);
 
         p->arm({w.get(), PollFlag::Out});
 
@@ -85,7 +85,7 @@ STD_TEST_SUITE(Poller) {
         auto pool = ObjPool::fromMemory();
         auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
-        createPipeFD(r, w);
+        createSocketPairFD(r, w);
 
         p->arm({r.get(), PollFlag::In});
         p->disarm(r.get());
@@ -105,7 +105,7 @@ STD_TEST_SUITE(Poller) {
         auto pool = ObjPool::fromMemory();
         auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
-        createPipeFD(r, w);
+        createSocketPairFD(r, w);
 
         p->arm({r.get(), PollFlag::In});
 
@@ -130,7 +130,7 @@ STD_TEST_SUITE(Poller) {
         auto pool = ObjPool::fromMemory();
         auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
-        createPipeFD(r, w);
+        createSocketPairFD(r, w);
 
         for (int i = 0; i < 3; ++i) {
             p->arm({r.get(), PollFlag::In});
@@ -155,8 +155,8 @@ STD_TEST_SUITE(Poller) {
         auto pool = ObjPool::fromMemory();
         auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r1, w1, r2, w2;
-        createPipeFD(r1, w1);
-        createPipeFD(r2, w2);
+        createSocketPairFD(r1, w1);
+        createSocketPairFD(r2, w2);
 
         p->arm({w1.get(), PollFlag::Out});
         p->arm({w2.get(), PollFlag::Out});
@@ -173,7 +173,7 @@ STD_TEST_SUITE(Poller) {
         auto pool = ObjPool::fromMemory();
         auto p = PollerIface::create(pool.mutPtr());
         ScopedFD r, w;
-        createPipeFD(r, w);
+        createSocketPairFD(r, w);
 
         // disarming an fd that was never armed should not crash
         p->disarm(r.get());

@@ -10,9 +10,8 @@
 #include <std/alg/defer.h>
 #include <std/mem/obj_pool.h>
 
-#include <netdb.h>
 #include <string.h>
-#include <sys/socket.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

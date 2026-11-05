@@ -18,7 +18,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
-#include <sys/socket.h>
+#include <std/sys/plat.h>
 
 #if __has_include(<liburing.h>)
     #include <liburing.h>

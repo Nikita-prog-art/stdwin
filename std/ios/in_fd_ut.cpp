@@ -5,7 +5,7 @@
 #include <std/tst/ut.h>
 #include <std/lib/vector.h>
 
-#include <sys/uio.h>
+#include <std/sys/plat.h>
 #include <string.h>
 
 using namespace stl;

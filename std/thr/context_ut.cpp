@@ -3,7 +3,7 @@
 #include <std/thr/runable.h>
 #include <std/tst/ut.h>
 
-#include <alloca.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

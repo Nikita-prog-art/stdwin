@@ -11,7 +11,7 @@
 #include <std/alg/minmax.h>
 #include <std/alg/advance.h>
 
-#include <sys/uio.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

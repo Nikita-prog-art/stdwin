@@ -7,8 +7,7 @@
 #include <std/dbg/insist.h>
 #include <std/str/builder.h>
 
-#include <pthread.h>
-#include <sched.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
@@ -26,7 +25,7 @@ namespace {
             if (exec_ && exec_->currentCoroId()) {
                 exec_->yield();
             } else {
-                sched_yield();
+                stdYield();
             }
         }
 
@@ -55,6 +54,27 @@ namespace {
         }
     };
 
+#if defined(_WIN32)
+    struct WinMutexImpl: public Mutex {
+        SRWLOCK lock_ = SRWLOCK_INIT;
+
+        void wait() noexcept override {
+            AcquireSRWLockExclusive(&lock_);
+        }
+
+        void post() noexcept override {
+            ReleaseSRWLockExclusive(&lock_);
+        }
+
+        bool tryWait() noexcept override {
+            return TryAcquireSRWLockExclusive(&lock_);
+        }
+
+        void* nativeHandle() noexcept override {
+            return &lock_;
+        }
+    };
+#else
     // pthread_mutex_t cannot be a base class: it is a union on glibc
     struct PosixMutexImpl: public Mutex {
         pthread_mutex_t mutex;
@@ -85,10 +105,15 @@ namespace {
             return &mutex;
         }
     };
+#endif
 }
 
 Mutex* Mutex::create(ObjPool* pool) {
+#if defined(_WIN32)
+    return pool->make<WinMutexImpl>();
+#else
     return pool->make<PosixMutexImpl>();
+#endif
 }
 
 Mutex* Mutex::create(ObjPool* pool, CoroExecutor* exec) {

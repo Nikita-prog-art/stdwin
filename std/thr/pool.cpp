@@ -23,7 +23,7 @@
 #include <std/rng/split_mix_64.h>
 
 #include <stdlib.h>
-#include <sched.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
@@ -124,7 +124,7 @@ void ThreadPoolImpl::join() noexcept {
     while (inflight_) {
         UnlockGuard unlock(mutex_);
 
-        sched_yield();
+        stdYield();
     }
 }
 
@@ -361,7 +361,7 @@ void WorkStealingThreadPool::flushLocal() noexcept {
 
 void WorkStealingThreadPool::join() noexcept {
     while (wq->sleeping() != workers_.size()) {
-        sched_yield();
+        stdYield();
     }
 }
 

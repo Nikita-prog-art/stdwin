@@ -4,6 +4,7 @@
 
 namespace stl {
     class MemoryOutput: public ZeroCopyOutput {
+        void* end_ = nullptr;
         void* imbueImpl(size_t* avail) override;
         void commitImpl(size_t len) noexcept override;
 
@@ -12,6 +13,13 @@ namespace stl {
 
         MemoryOutput(void* _ptr) noexcept
             : ptr(_ptr)
+        {
+        }
+
+        // bounded variant: imbue() never offers more than cap bytes
+        MemoryOutput(void* _ptr, size_t cap) noexcept
+            : ptr(_ptr)
+            , end_((u8*)_ptr + cap)
         {
         }
     };

@@ -5,7 +5,7 @@
 #include <std/str/builder.h>
 #include <std/net/tcp_socket.h>
 
-#include <sys/uio.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

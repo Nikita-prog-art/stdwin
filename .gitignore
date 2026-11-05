@@ -6,6 +6,7 @@
 *~
 *#
 .build/
+.build-win/
 bld
 *bld*
 test
@@ -28,3 +29,21 @@ tst/pool_sd
 tst/pool_ss
 tst/pool_sw
 tst/io_uring_msg
+
+# build runner installs symlinks at the repo root
+/libstd
+/channel_pipeline
+/coro_pipe
+/coro_sw
+/dns_stress
+/http_load
+/http_serve_files
+/http_serve_ok
+/io_uring_msg
+/perf_hash
+/perf_malloc
+/perf_map
+/perf_objpool
+/pool_sd
+/pool_ss
+/pool_sw

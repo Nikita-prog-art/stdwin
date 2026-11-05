@@ -10,7 +10,7 @@
 #include <std/dbg/insist.h>
 #include <std/mem/obj_pool.h>
 
-#include <sys/uio.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

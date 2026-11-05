@@ -7,7 +7,7 @@
 #include <std/sys/atomic.h>
 #include <std/mem/obj_pool.h>
 
-#include <poll.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
@@ -16,14 +16,13 @@ STD_TEST_SUITE(Parker) {
         Parker p;
         p.signal();
 
-        struct pollfd pfd;
+        StdPollFD pfd {};
 
         pfd.fd = p.fd();
-        pfd.events = POLLIN;
-        pfd.revents = 0;
+        pfd.events = stdPollIn;
 
-        STD_INSIST(::poll(&pfd, 1, 0) == 1);
-        STD_INSIST(pfd.revents & POLLIN);
+        STD_INSIST(stdPoll(&pfd, 1, 0) == 1);
+        STD_INSIST(pfd.revents & stdPollIn);
 
         p.drain();
     }
@@ -32,13 +31,12 @@ STD_TEST_SUITE(Parker) {
         Parker p;
         p.unpark();
 
-        struct pollfd pfd;
+        StdPollFD pfd {};
 
         pfd.fd = p.fd();
-        pfd.events = POLLIN;
-        pfd.revents = 0;
+        pfd.events = stdPollIn;
 
-        STD_INSIST(::poll(&pfd, 1, 0) == 0);
+        STD_INSIST(stdPoll(&pfd, 1, 0) == 0);
     }
 
     STD_TEST(UnparkDuringParkWrites) {
@@ -48,13 +46,13 @@ STD_TEST_SUITE(Parker) {
         p.park([&] {
             p.unpark();
 
-            struct pollfd pfd;
+            StdPollFD pfd {};
 
             pfd.fd = p.fd();
-            pfd.events = POLLIN;
-            pfd.revents = 0;
+            pfd.events = stdPollIn;
 
-            written = (::poll(&pfd, 1, 0) == 1);
+
+            written = (stdPoll(&pfd, 1, 0) == 1);
         });
 
         STD_INSIST(written);
@@ -69,13 +67,12 @@ STD_TEST_SUITE(Parker) {
 
         p.unpark();
 
-        struct pollfd pfd;
+        StdPollFD pfd {};
 
         pfd.fd = p.fd();
-        pfd.events = POLLIN;
-        pfd.revents = 0;
+        pfd.events = stdPollIn;
 
-        STD_INSIST(::poll(&pfd, 1, 0) == 0);
+        STD_INSIST(stdPoll(&pfd, 1, 0) == 0);
     }
 
     STD_TEST(ParkFromAnotherThread) {
@@ -106,13 +103,13 @@ STD_TEST_SUITE(Parker) {
         for (int i = 0; i < 100; ++i) {
             p.park([&] {
                 // spin until eventfd is readable or short timeout
-                struct pollfd pfd;
+                StdPollFD pfd {};
 
                 pfd.fd = p.fd();
-                pfd.events = POLLIN;
-                pfd.revents = 0;
+                pfd.events = stdPollIn;
 
-                ::poll(&pfd, 1, 10);
+
+                stdPoll(&pfd, 1, 10);
             });
 
             p.drain();
@@ -131,13 +128,12 @@ STD_TEST_SUITE(Parker) {
             p.unpark();
         });
 
-        struct pollfd pfd;
+        StdPollFD pfd {};
 
         pfd.fd = p.fd();
-        pfd.events = POLLIN;
-        pfd.revents = 0;
+        pfd.events = stdPollIn;
 
-        STD_INSIST(::poll(&pfd, 1, 0) == 1);
+        STD_INSIST(stdPoll(&pfd, 1, 0) == 1);
         p.drain();
     }
 
@@ -148,13 +144,12 @@ STD_TEST_SUITE(Parker) {
             p.signal();
         });
 
-        struct pollfd pfd;
+        StdPollFD pfd {};
 
         pfd.fd = p.fd();
-        pfd.events = POLLIN;
-        pfd.revents = 0;
+        pfd.events = stdPollIn;
 
-        STD_INSIST(::poll(&pfd, 1, 0) == 1);
+        STD_INSIST(stdPoll(&pfd, 1, 0) == 1);
         p.drain();
     }
 }

@@ -3,6 +3,7 @@
 
 #include <std/dbg/insist.h>
 #include <std/mem/obj_pool.h>
+#include <std/sys/plat.h>
 
 #if defined(__APPLE__)
     #include <dispatch/dispatch.h>
@@ -19,7 +20,33 @@ void* Semaphore::nativeHandle() noexcept {
 }
 
 namespace {
-#if defined(__APPLE__)
+#if defined(_WIN32)
+    struct WinSemImpl: public Semaphore {
+        HANDLE sem_;
+
+        WinSemImpl(size_t initial) noexcept
+            : sem_(CreateSemaphoreW(nullptr, (LONG)initial, LONG_MAX, nullptr))
+        {
+            STD_INSIST(sem_);
+        }
+
+        ~WinSemImpl() noexcept {
+            STD_INSIST(CloseHandle(sem_));
+        }
+
+        void post() noexcept override {
+            STD_INSIST(ReleaseSemaphore(sem_, 1, nullptr));
+        }
+
+        void wait() noexcept override {
+            STD_INSIST(WaitForSingleObject(sem_, INFINITE) == WAIT_OBJECT_0);
+        }
+
+        bool tryWait() noexcept override {
+            return WaitForSingleObject(sem_, 0) == WAIT_OBJECT_0;
+        }
+    };
+#elif defined(__APPLE__)
     struct SemImpl: public Semaphore {
         dispatch_semaphore_t sem_;
 
@@ -72,7 +99,11 @@ namespace {
 }
 
 Semaphore* Semaphore::create(ObjPool* pool, size_t initial) {
+#if defined(_WIN32)
+    return pool->make<WinSemImpl>(initial);
+#else
     return pool->make<SemImpl>(initial);
+#endif
 }
 
 Semaphore* Semaphore::create(ObjPool* pool, size_t initial, CoroExecutor* exec) {

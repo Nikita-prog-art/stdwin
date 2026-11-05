@@ -12,10 +12,8 @@
 #include <std/alg/minmax.h>
 #include <std/mem/obj_pool.h>
 
-#include <poll.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <unistd.h>
+#include <std/sys/plat.h>
+
 #include <stdlib.h>
 
 #if defined(__linux__)
@@ -26,7 +24,6 @@
 #endif
 
 #if defined(_WIN32)
-    #include <winsock2.h>
     #define STD_POLL WSAPoll
 #else
     #define STD_POLL poll
@@ -175,9 +172,16 @@ namespace {
 #endif
 
 namespace {
+#if defined(_WIN32)
+    using PollSysFD = WSAPOLLFD;
+#else
+    using PollSysFD = struct pollfd;
+#endif
+
     struct PollPoller: public PollerIface {
         IntMap<PollFD> armed_;
-        Vector<struct pollfd> fds_; // rebuilt each wait()
+        Vector<PollFD> fds_; // tagged fds, rebuilt each wait()
+        Vector<PollSysFD> sys_; // native fds handed to poll()
 
         PollPoller(ObjPool* pool)
             : armed_(ObjPool::create(pool))
@@ -185,6 +189,12 @@ namespace {
         }
 
         void arm(PollFD pfd) override {
+#if defined(_WIN32)
+            // WSAPoll only accepts sockets: a pipe or a file breaks the whole
+            // wait, so reject them at arm() time
+            STD_INSIST(pfd.fd < 0 || stdIsSocket(pfd.fd));
+#endif
+
             armed_[pfd.fd] = pfd;
         }
 
@@ -194,31 +204,52 @@ namespace {
 
         void waitImpl(VisitorFace& v, u32 timeoutUs) override {
             fds_.clear();
+            sys_.clear();
 
             armed_.visit([&](const PollFD& e) {
-                fds_.pushBack({
+                if (e.fd < 0) {
+                    return;
+                }
+
+                fds_.pushBack(e);
+
+#if defined(_WIN32)
+                sys_.pushBack({
+                    .fd = stdNativeSocket(e.fd),
+                    .events = e.toPollEvents(),
+                    .revents = 0,
+                });
+#else
+                sys_.pushBack({
                     .fd = e.fd,
                     .events = e.toPollEvents(),
                     .revents = 0,
                 });
+#endif
             });
 
-            int n = STD_POLL(fds_.mutData(), (int)fds_.length(), (int)((timeoutUs + 999) / 1000));
-
-            if (n < 0) {
+            if (sys_.empty()) {
                 return;
             }
 
-            for (const auto& pfd : range(fds_)) {
-                if (pfd.revents == 0) {
+            int n = STD_POLL(sys_.mutData(), (unsigned long)sys_.length(), (int)((timeoutUs + 999) / 1000));
+
+            if (n <= 0) {
+                return;
+            }
+
+            for (size_t i = 0; i < sys_.length(); ++i) {
+                if (sys_[i].revents == 0) {
                     continue;
                 }
 
-                if (!armed_.erase(pfd.fd)) {
+                int fd = fds_[i].fd;
+
+                if (!armed_.erase(fd)) {
                     continue;
                 }
 
-                PollFD ev{pfd.fd, PollFD::fromPollEvents(pfd.revents)};
+                PollFD ev{fd, PollFD::fromPollEvents(sys_[i].revents)};
 
                 v.visit(&ev);
             }

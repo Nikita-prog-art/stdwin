@@ -7,8 +7,7 @@
 #include <std/alg/range.h>
 #include <std/alg/exchange.h>
 
-#include <alloca.h>
-#include <sys/uio.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

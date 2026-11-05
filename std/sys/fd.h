@@ -44,4 +44,5 @@ namespace stl {
     };
 
     void createPipeFD(ScopedFD& in, ScopedFD& out);
+    void createSocketPairFD(ScopedFD& a, ScopedFD& b);
 }

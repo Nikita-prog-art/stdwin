@@ -15,7 +15,7 @@
 #include <std/mem/obj_pool.h>
 
 #include <string.h>
-#include <unistd.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
@@ -49,7 +49,7 @@ STD_TEST_SUITE(IoClassicPoll) {
         auto exec = ctx.exec;
         auto io = ctx.io;
         ScopedFD readEnd, writeEnd;
-        createPipeFD(readEnd, writeEnd);
+        createSocketPairFD(readEnd, writeEnd);
         int result = 0;
 
         exec->spawn([&] {
@@ -74,7 +74,7 @@ STD_TEST_SUITE(IoClassicPoll) {
         auto exec = ctx.exec;
         auto io = ctx.io;
         ScopedFD readEnd, writeEnd;
-        createPipeFD(readEnd, writeEnd);
+        createSocketPairFD(readEnd, writeEnd);
 
         auto f = async(exec, [&] {
             return io->poll({readEnd.get(), PollFlag::In}, 1000);
@@ -93,7 +93,7 @@ STD_TEST_SUITE(IoClassicPoll) {
         int orderIdx = 0;
 
         for (int i = 0; i < N; i++) {
-            createPipeFD(readEnds[i], writeEnds[i]);
+            createSocketPairFD(readEnds[i], writeEnds[i]);
         }
 
         for (int i = 0; i < N; i++) {
@@ -122,7 +122,7 @@ STD_TEST_SUITE(IoClassicPoll) {
         auto exec = ctx.exec;
         auto io = ctx.io;
         ScopedFD readEnd, writeEnd;
-        createPipeFD(readEnd, writeEnd);
+        createSocketPairFD(readEnd, writeEnd);
         const int N = 40;
         int woken = 0;
 
@@ -223,8 +223,8 @@ STD_TEST_SUITE(IoClassicPoll) {
         auto exec = ctx.exec;
         auto io = ctx.io;
         ScopedFD r1, w1, r2, w2;
-        createPipeFD(r1, w1);
-        createPipeFD(r2, w2);
+        createSocketPairFD(r1, w1);
+        createSocketPairFD(r2, w2);
         u32 result = 0;
 
         exec->spawn([&] {
@@ -253,8 +253,8 @@ STD_TEST_SUITE(IoClassicPoll) {
         auto exec = ctx.exec;
         auto io = ctx.io;
         ScopedFD r1, w1, r2, w2;
-        createPipeFD(r1, w1);
-        createPipeFD(r2, w2);
+        createSocketPairFD(r1, w1);
+        createSocketPairFD(r2, w2);
         u32 result = 0;
 
         exec->spawn([&] {
@@ -283,8 +283,8 @@ STD_TEST_SUITE(IoClassicPoll) {
         auto exec = ctx.exec;
         auto io = ctx.io;
         ScopedFD r1, w1, r2, w2;
-        createPipeFD(r1, w1);
-        createPipeFD(r2, w2);
+        createSocketPairFD(r1, w1);
+        createSocketPairFD(r2, w2);
 
         auto f = async(exec, [&] {
             auto opool = ObjPool::fromMemory();
@@ -313,7 +313,7 @@ STD_TEST_SUITE(IoClassicPoll) {
         ScopedFD readEnds[N], writeEnds[N];
 
         for (int i = 0; i < N; ++i) {
-            createPipeFD(readEnds[i], writeEnds[i]);
+            createSocketPairFD(readEnds[i], writeEnds[i]);
         }
 
         u32 result = 0;
@@ -351,7 +351,7 @@ STD_TEST_SUITE(IoClassicFS) {
             int fd = makeTmpFd();
 
             const char data[] = "hello pread";
-            ::write(fd, data, sizeof(data));
+            stdWrite(fd, data, sizeof(data));
 
             char buf[32] = {};
             size_t n = 0;
@@ -360,7 +360,7 @@ STD_TEST_SUITE(IoClassicFS) {
             STD_INSIST(n == sizeof(data));
             STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
 
-            ::close(fd);
+            stdClose(fd);
         });
 
         exec->join();
@@ -381,10 +381,10 @@ STD_TEST_SUITE(IoClassicFS) {
             STD_INSIST(n == sizeof(data));
 
             char buf[32] = {};
-            ::pread(fd, buf, sizeof(buf), 0);
+            stdPread(fd, buf, sizeof(buf), 0);
             STD_INSIST(memcmp(buf, data, sizeof(data)) == 0);
 
-            ::close(fd);
+            stdClose(fd);
         });
 
         exec->join();
@@ -409,7 +409,7 @@ STD_TEST_SUITE(IoClassicFS) {
             STD_INSIST(r == sizeof(msg));
             STD_INSIST(memcmp(buf, msg, sizeof(msg)) == 0);
 
-            ::close(fd);
+            stdClose(fd);
         });
 
         exec->join();
@@ -424,7 +424,7 @@ STD_TEST_SUITE(IoClassicFS) {
             int fd = makeTmpFd();
 
             const char data[] = "0123456789";
-            ::write(fd, data, sizeof(data));
+            stdWrite(fd, data, sizeof(data));
 
             char buf[4] = {};
             size_t n = 0;
@@ -433,7 +433,7 @@ STD_TEST_SUITE(IoClassicFS) {
             STD_INSIST(n == 4);
             STD_INSIST(memcmp(buf, "3456", 4) == 0);
 
-            ::close(fd);
+            stdClose(fd);
         });
 
         exec->join();
@@ -447,7 +447,7 @@ STD_TEST_SUITE(IoClassicFS) {
         exec->spawn([&] {
             int fd = makeTmpFd();
             const char data[] = "concurrent";
-            ::write(fd, data, sizeof(data));
+            stdWrite(fd, data, sizeof(data));
 
             auto spool = ObjPool::fromMemory();
             auto& sem = *Semaphore::create(spool.mutPtr(), 0, exec);
@@ -467,7 +467,7 @@ STD_TEST_SUITE(IoClassicFS) {
                 sem.wait();
             }
 
-            ::close(fd);
+            stdClose(fd);
         });
 
         exec->join();

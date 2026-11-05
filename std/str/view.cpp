@@ -1,11 +1,9 @@
-#ifndef _GNU_SOURCE
-    #define _GNU_SOURCE
-#endif
 #include <string.h>
 
 #include "view.h"
 #include "hash.h"
 
+#include <std/sys/plat.h>
 #include <std/sys/crt.h>
 #include <std/lib/buffer.h>
 #include <std/alg/minmax.h>
@@ -83,7 +81,7 @@ const u8* StringView::search(StringView substr) const noexcept {
         return data();
     }
 
-    return (const u8*)memmem(fix(data()), length(), fix(substr.data()), substr.length());
+    return (const u8*)stdMemMem(fix(data()), length(), fix(substr.data()), substr.length());
 }
 
 const u8* StringView::memChr(u8 ch) const noexcept {

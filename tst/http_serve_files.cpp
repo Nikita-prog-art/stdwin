@@ -8,9 +8,7 @@
 #include <std/ios/in_fd_coro.h>
 #include <std/net/ssl_socket.h>
 
-#include <fcntl.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 
@@ -61,7 +59,7 @@ int main(int argc, char** argv) {
         void serve(HttpServerResponse& resp) override {
             auto req = resp.request();
 
-            ScopedFD fd(::open(Buffer(req->path()).cStr(), O_RDONLY));
+            ScopedFD fd(stdOpen(Buffer(req->path()).cStr(), O_RDONLY));
 
             if (fd.get() < 0) {
                 resp.setStatus(404);

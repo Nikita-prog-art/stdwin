@@ -9,8 +9,7 @@
 #include <std/mem/obj_pool.h>
 
 #include <string.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+#include <std/sys/plat.h>
 
 using namespace stl;
 

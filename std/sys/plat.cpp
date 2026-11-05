@@ -206,6 +206,22 @@ SOCKET stl::stdNativeSocket(int fd) noexcept {
 }
 #endif
 
+int stl::stdFromNativeSocket(u64 native) noexcept {
+#if defined(_WIN32)
+    return tagSocket((SOCKET)native);
+#else
+    return (int)native;
+#endif
+}
+
+u64 stl::stdToNativeSocket(int fd) noexcept {
+#if defined(_WIN32)
+    return (u64)(fd & SocketMask);
+#else
+    return (u64)fd;
+#endif
+}
+
 bool stl::stdIsSocket(int fd) noexcept {
 #if defined(_WIN32)
     return fd >= 0 && (fd & SocketTag) != 0;
@@ -371,6 +387,66 @@ int stl::stdOpen(const char* path, int flags, int mode) {
     return fd;
 #else
     return ::open(path, flags, mode);
+#endif
+}
+
+int stl::stdUnlink(const char* path) {
+#if defined(_WIN32)
+    wchar_t* wide = stdToWide(path, strlen(path));
+
+    if (!wide) {
+        errno = EINVAL;
+
+        return -1;
+    }
+
+    int result = ::_wunlink(wide);
+
+    stdFreeWide(wide);
+
+    return result;
+#else
+    return ::unlink(path);
+#endif
+}
+
+int stl::stdMkdir(const char* path) {
+#if defined(_WIN32)
+    wchar_t* wide = stdToWide(path, strlen(path));
+
+    if (!wide) {
+        errno = EINVAL;
+
+        return -1;
+    }
+
+    int result = ::_wmkdir(wide);
+
+    stdFreeWide(wide);
+
+    return result;
+#else
+    return ::mkdir(path, 0755);
+#endif
+}
+
+int stl::stdRmdir(const char* path) {
+#if defined(_WIN32)
+    wchar_t* wide = stdToWide(path, strlen(path));
+
+    if (!wide) {
+        errno = EINVAL;
+
+        return -1;
+    }
+
+    int result = ::_wrmdir(wide);
+
+    stdFreeWide(wide);
+
+    return result;
+#else
+    return ::rmdir(path);
 #endif
 }
 

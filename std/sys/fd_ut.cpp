@@ -175,6 +175,35 @@ STD_TEST_SUITE(FD) {
         STD_INSIST(strcmp(readBuf, "ABC") == 0);
     }
 
+    STD_TEST(BinaryDataPreservedInMemFd) {
+        int fd = memFD("test_binary");
+        STD_INSIST(fd >= 0);
+
+        ScopedFD scoped(fd);
+        const u8 data[] = {0x1a, 0x0d, 0x0a, 0x00, 0xff, 0x0d, 0x1a, 0x00};
+
+        STD_INSIST(scoped.write(data, sizeof(data)) == sizeof(data));
+        stdSeek(fd, 0, SEEK_SET);
+
+        u8 out[sizeof(data)] = {};
+        STD_INSIST(scoped.read(out, sizeof(out)) == sizeof(out));
+        STD_INSIST(memcmp(out, data, sizeof(data)) == 0);
+    }
+
+    STD_TEST(BinaryDataPreservedInPipe) {
+        ScopedFD readEnd;
+        ScopedFD writeEnd;
+        createPipeFD(readEnd, writeEnd);
+
+        const u8 data[] = {0x1a, 0x0d, 0x0a, 0x00, 0xff, 0x0d, 0x1a, 0x00};
+
+        STD_INSIST(writeEnd.write(data, sizeof(data)) == sizeof(data));
+
+        u8 out[sizeof(data)] = {};
+        STD_INSIST(readEnd.read(out, sizeof(out)) == sizeof(out));
+        STD_INSIST(memcmp(out, data, sizeof(data)) == 0);
+    }
+
     STD_TEST(LargeDataMemFd) {
         int fd = memFD("test_large");
         STD_INSIST(fd >= 0);

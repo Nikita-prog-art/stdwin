@@ -23,7 +23,9 @@
 Порт по варианту A выполнен и проверен. Сборка — кросс-компилятором clang из
 nixpkgs (`pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.clang`),
 прогон тестов — нативно на Windows (через WSL interop, без Wine):
-**1394 OK, 0 ERR, 0 SKIP**; Linux-прогон (GCC 16) — те же 1394 OK.
+**1397 OK, 0 ERR, 0 SKIP**; Linux-прогон (GCC 16) — те же 1397 OK.
+Дополнительно проверена сборка и работа с c-ares и xxhash (Windows-бэкенды DNS и
+хеша): полный прогон — 1397 OK, 0 ERR.
 
 Отличия от плана ниже:
 
@@ -33,7 +35,10 @@ nixpkgs (`pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.clang`)
 - CI не добавлялся, а существовавший `.github/workflows/ci.yml` удалён: все
   прогоны делаются локально перед коммитами;
 - фазы A6.1 (санитайзеры clang) и A7 (IOCP, бенчмарки) в текущий объём не входят;
-- проверка выполнения — запуск `.exe` на Windows, а не Wine.
+- проверка выполнения — запуск `.exe` на Windows, а не Wine;
+- OpenSSL-бэкенд TLS на Windows не проверен: кросс-сборка openssl в nixpkgs падает
+  на компиляции `.rc` (`winver.h`); сам `ssl_socket.cpp` от платформы не зависит и
+  собирается с включённым бэкендом на других платформах.
 
 Реализованный платформенный слой: `std/sys/plat.h` + `std/sys/plat.cpp`, тег
 сокетов в `int`, `WSAPoll`-поллер, UDP-пара как `EventFD`/`JoinPipe`,

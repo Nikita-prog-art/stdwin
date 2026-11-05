@@ -103,6 +103,9 @@ namespace stl {
     bool stdIsSocket(int fd) noexcept;
 
     int stdOpen(const char* path, int flags, int mode = 0644);
+    int stdUnlink(const char* path);
+    int stdMkdir(const char* path);
+    int stdRmdir(const char* path);
     int stdPipe(int fds[2]);
     off_t stdSeek(int fd, off_t off, int whence);
 
@@ -134,6 +137,11 @@ namespace stl {
     ssize_t stdSendTo(int fd, const void* buf, size_t len, int flags, const sockaddr* addr, socklen_t addrLen);
 
     void stdWsaInit() noexcept;
+
+    // native socket value <-> library descriptor. Identity outside Windows;
+    // on Windows the library descriptor carries the socket tag.
+    int stdFromNativeSocket(u64 native) noexcept;
+    u64 stdToNativeSocket(int fd) noexcept;
 
 #if defined(_WIN32)
     SOCKET stdNativeSocket(int fd) noexcept;

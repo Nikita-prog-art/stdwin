@@ -6,7 +6,7 @@
 *~
 *#
 .build/
-.build-win/
+.build-win*/
 bld
 *bld*
 test

@@ -1,6 +1,10 @@
 #include "fs.h"
 
 #include <std/tst/ut.h>
+#include <std/sys/fd.h>
+#include <std/sys/plat.h>
+#include <std/alg/defer.h>
+#include <std/lib/buffer.h>
 #include <std/lib/vector.h>
 
 using namespace stl;
@@ -48,5 +52,39 @@ STD_TEST_SUITE(ListDir) {
         STD_INSIST(foundTstDir);
         STD_INSIST(foundStdDir);
         STD_INSIST(foundBuildFile);
+    }
+
+    STD_TEST(NonAsciiFileName) {
+        StringView name = StringView(u8"std-test-тест-文件.txt");
+        Buffer path(name);
+        bool created = false;
+
+        STD_DEFER {
+            if (created) {
+                stdUnlink(path.cStr());
+            }
+        };
+
+        int fd = stdOpen(path.cStr(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        STD_INSIST(fd >= 0);
+
+        ScopedFD scoped(fd);
+        created = true;
+
+        const char data[] = "unicode";
+        const size_t len = sizeof(data) - 1;
+
+        STD_INSIST(scoped.write(data, len) == len);
+        scoped.close();
+
+        bool found = false;
+
+        listDir(StringView(u8"."), [&](const TPathInfo& pi) {
+            if (pi.item == name) {
+                found = true;
+            }
+        });
+
+        STD_INSIST(found);
     }
 }

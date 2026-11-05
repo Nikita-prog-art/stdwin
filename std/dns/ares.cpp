@@ -140,9 +140,9 @@ void DnsResolverImpl::onSockState(ares_socket_t fd, int readable, int writable) 
     u32 flags = (readable ? PollFlag::In : 0) | (writable ? PollFlag::Out : 0);
 
     if (flags) {
-        poller_->arm({(int)fd, flags});
+        poller_->arm({stdFromNativeSocket((u64)fd), flags});
     } else {
-        poller_->disarm((int)fd);
+        poller_->disarm(stdFromNativeSocket((u64)fd));
     }
 }
 
@@ -254,8 +254,8 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
                 if (ev->fd == parker_.fd()) {
                     parker_.drain();
                 } else {
-                    ares_socket_t rfd = (ev->flags & PollFlag::In) ? ev->fd : ARES_SOCKET_BAD;
-                    ares_socket_t wfd = (ev->flags & PollFlag::Out) ? ev->fd : ARES_SOCKET_BAD;
+                    ares_socket_t rfd = (ev->flags & PollFlag::In) ? (ares_socket_t)stdToNativeSocket(ev->fd) : ARES_SOCKET_BAD;
+                    ares_socket_t wfd = (ev->flags & PollFlag::Out) ? (ares_socket_t)stdToNativeSocket(ev->fd) : ARES_SOCKET_BAD;
 
                     ares_process_fd(channel_, rfd, wfd);
                 }
@@ -279,7 +279,22 @@ void DnsResolverImpl::driverLoop(DnsRequest& req) {
     }
 }
 
+namespace {
+    bool aresInit() {
+        static const bool ok = [] {
+            return ares_library_init(ARES_LIB_INIT_ALL) == 0;
+        }();
+
+        return ok;
+    }
+}
+
 DnsResolver* stl::createAresResolver(ObjPool* pool, CoroExecutor* exec, const DnsConfig& cfg) {
+    // ares_library_init() is what brings up Winsock/c-ares globals on Windows
+    if (!aresInit()) {
+        return nullptr;
+    }
+
     return pool->make<DnsResolverImpl>(pool, exec, cfg);
 }
 #else

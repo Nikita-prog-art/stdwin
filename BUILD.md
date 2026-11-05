@@ -90,6 +90,33 @@ Up to three TLS backends can be available simultaneously. Selection at runtime v
 |--------|---------|-------|
 | `<ares.h>` | c-ares | Async DNS via event loop; without it falls back to `getaddrinfo` offloaded to a thread pool |
 
+### Optional dependencies in the Windows build
+
+c-ares and xxhash build and work for the Windows target, but the build runner
+does not inherit `NIX_CFLAGS_COMPILE`/`NIX_LDFLAGS`, so pass their paths
+explicitly. `-l:lib*.dll.a` is required because `-static` makes plain `-l` skip
+DLL import libraries:
+
+```sh
+CARES=$(nix-build --no-out-link -E 'let p = (import <nixpkgs> {}).pkgsCross.mingw-ucrt-x86_64-llvm; in p.c-ares')
+CARES_DEV=$(nix-build --no-out-link -E 'let p = (import <nixpkgs> {}).pkgsCross.mingw-ucrt-x86_64-llvm; in p.c-ares.dev')
+XHASH=$(nix-build --no-out-link -E 'let p = (import <nixpkgs> {}).pkgsCross.mingw-ucrt-x86_64-llvm; in p.xxhash')
+
+nix-shell -p 'pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.clang' \
+          'pkgsCross.mingw-ucrt-x86_64-llvm.c-ares' \
+          'pkgsCross.mingw-ucrt-x86_64-llvm.xxhash' --run "
+    CPPFLAGS='-isystem $CARES_DEV/include -isystem $XHASH/include' \
+    LDFLAGS='-L$CARES/lib -L$XHASH/lib -l:libcares.dll.a -l:libxxhash.dll.a' \
+    CC=x86_64-w64-mingw32-clang CXX=x86_64-w64-mingw32-clang++ \
+    AR=x86_64-w64-mingw32-ar \
+    ./build --target x86_64-w64-mingw32 -B .build-win-deps -j \$(nproc)
+"
+```
+
+Copy `libcares.dll` and `libxxhash.dll` from the package `bin/` directories next
+to `test.exe` before running. The default build (without these packages) uses the
+`getaddrinfo` resolver and the built-in hash and needs no DLLs.
+
 ### Stack traces
 
 | Header | Library | Used in |

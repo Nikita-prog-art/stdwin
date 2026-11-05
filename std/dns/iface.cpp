@@ -3,6 +3,7 @@
 #include "system.h"
 
 #include <std/thr/pool.h>
+#include <std/sys/plat.h>
 #include <std/mem/obj_pool.h>
 
 #include <stdlib.h>
@@ -10,6 +11,8 @@
 using namespace stl;
 
 DnsResolver* DnsResolver::create(ObjPool* pool, CoroExecutor* exec, ThreadPool* tp, const DnsConfig& cfg) {
+    stdWsaInit();
+
     if (!getenv("USE_SYSTEM_RESOLVER")) {
         if (auto res = createAresResolver(pool, exec, cfg); res) {
             return res;

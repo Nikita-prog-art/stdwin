@@ -40,6 +40,11 @@ available (WSL). Produced binaries are linked statically against libc++/libunwin
 so they only need the system UCRT and `WS2_32.dll`; no MinGW runtime DLLs are
 shipped.
 
+Both test suites bind fixed loopback ports. On a WSL host the network stack is
+shared with Windows, and Windows keeps closed connections in `TIME_WAIT` for a
+few minutes, so run the Linux and Windows suites several minutes apart (or the
+second run fails to bind with `EADDRINUSE`).
+
 Platform notes:
 
 - Windows-specific code lives in `std/sys/plat.h` / `std/sys/plat.cpp`; the

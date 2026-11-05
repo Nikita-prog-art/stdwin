@@ -1,3 +1,7 @@
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+    #define _GNU_SOURCE
+#endif
+
 #include "plat.h"
 
 #include <std/dbg/insist.h>
@@ -303,6 +307,9 @@ int stl::stdPoll(StdPollFD* fds, unsigned count, int timeoutMs) {
 }
 
 const void* stl::stdMemMem(const void* hay, size_t hayLen, const void* needle, size_t needleLen) noexcept {
+#if !defined(_WIN32)
+    return ::memmem(hay, hayLen, needle, needleLen);
+#else
     if (needleLen == 0) {
         return hay;
     }
@@ -322,6 +329,7 @@ const void* stl::stdMemMem(const void* hay, size_t hayLen, const void* needle, s
     }
 
     return nullptr;
+#endif
 }
 
 u32 stl::stdPageSize() noexcept {
@@ -727,6 +735,8 @@ int stl::stdSocket(int domain, int type, int protocol) {
     }
 
     return tagSocket(s);
+#elif defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC)
+    return ::socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol);
 #else
     int fd = ::socket(domain, type, protocol);
 
@@ -772,7 +782,13 @@ int stl::stdAccept(int fd, sockaddr* addr, socklen_t* addrLen) {
 #elif defined(__linux__)
     return ::accept4(fd, addr, addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
 #else
-    return ::accept(fd, addr, addrLen);
+    int r = ::accept(fd, addr, addrLen);
+
+    if (r >= 0) {
+        setNonBlockingFlags(r);
+    }
+
+    return r;
 #endif
 }
 

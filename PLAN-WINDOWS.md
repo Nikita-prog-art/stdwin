@@ -34,14 +34,20 @@ nixpkgs (`pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.clang`)
   (бинарь зависит только от системного UCRT и `WS2_32.dll`);
 - CI не добавлялся, а существовавший `.github/workflows/ci.yml` удалён: все
   прогоны делаются локально перед коммитами;
-- фазы A6.1 (санитайзеры clang) и A7 (IOCP, бенчмарки) в текущий объём не входят;
-  более того, в nixpkgs-пакете compiler-rt для mingw нет `libclang_rt.asan` под
-  Windows, поэтому A6.1 с этим тулчейном невыполним без отдельного llvm-mingw;
-- проверка выполнения — запуск `.exe` на Windows, а не Wine;
-- TLS-бэкенды на Windows не проверены: кросс-сборка openssl в nixpkgs падает на
-  компиляции `.rc` (`winver.h`), а mbedtls — на `pthread.h` (в этом тулчейне нет
-  winpthreads). Сам `ssl_socket.cpp` от платформы не зависит и собирается с
-  включённым бэкендом на других платформах.
+- A7 (IOCP, бенчмарки) в текущий объём не входит. A6.1 (санитайзеры) сделана
+  отдельным тулчейном: в nixpkgs compiler-rt для mingw нет `libclang_rt.asan`,
+  поэтому `dev/win-asan.sh` собирает и гоняет тесты через llvm-mingw — ASAN и
+  ASAN+UBSAN дают 1398 OK без единого отчёта; поставка остаётся на nixpkgs clang;
+- проверка выполнения — запуск `.exe` на Windows (WSL interop), а не Wine;
+- TLS на Windows проверен: `dev/openssl-win.sh` собирает статические
+  `libssl.a`/`libcrypto.a` из исходников nixpkgs мимо упаковки (без `openssl.exe`
+  и `.rc`), `dev/win.sh` подхватывает их, `dev/tls_smoke.sh` получает `200 OK`
+  от `http_serve_ok.exe` по HTTPS (клиент — curl, TLS-стек системы). mbedTLS не
+  нужен: nixpkgs включает `MBEDTLS_THREADING_PTHREAD`, в upstream он выключен;
+  s2n на Windows неприменим. Сам `ssl_socket.cpp` от платформы не зависит;
+- `recvmsg`/`sendmsg`/`recvmmsg` и control-сообщения на Windows возвращают
+  `ENOTSUP` (`recvmmsg` раньше возвращал `ENOSYS`); `SCM_RIGHTS` и UDP GRO
+  аналогов на Windows не имеют — это свойство платформы, а не долг.
 
 Реализованный платформенный слой: `std/sys/plat.h` + `std/sys/plat.cpp`, тег
 сокетов в `int`, `WSAPoll`-поллер, UDP-пара как `EventFD`/`JoinPipe`,

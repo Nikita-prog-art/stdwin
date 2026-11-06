@@ -40,6 +40,13 @@ available (WSL). Produced binaries are linked statically against libc++/libunwin
 so they only need the system UCRT and `WS2_32.dll`; no MinGW runtime DLLs are
 shipped.
 
+Two optional pieces are driven by their own scripts:
+
+- `./dev/openssl-win.sh` builds a static OpenSSL for TLS, which `./dev/win.sh`
+  then picks up automatically; `./dev/tls_smoke.sh` checks HTTPS on loopback.
+- `./dev/win-asan.sh` runs the suite under ASAN and UBSAN with llvm-mingw,
+  because the nixpkgs clang for mingw has no sanitizer runtime.
+
 Both test suites bind fixed loopback ports, and on a WSL host Windows and Linux
 share the network stack. `dev/win.sh` therefore runs the Windows tests with
 `STD_TEST_PORT_OFFSET=1000`, which shifts every fixed test port. On WSL the
@@ -118,6 +125,46 @@ nix-shell -p 'pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.cla
 Copy `libcares.dll` and `libxxhash.dll` from the package `bin/` directories next
 to `test.exe` before running. The default build (without these packages) uses the
 `getaddrinfo` resolver and the built-in hash and needs no DLLs.
+
+### TLS for the Windows build
+
+The nixpkgs `openssl` package cannot be cross-built as is: it also builds
+`openssl.exe`, whose resource script fails in `windres` (`winver.h`). Only the
+libraries are needed, so `./dev/openssl-win.sh` builds them from the same
+nixpkgs source into `.build/deps/openssl-win`:
+
+```sh
+./dev/openssl-win.sh
+./dev/win.sh
+./dev/tls_smoke.sh
+```
+
+`./dev/win.sh` links the static `libssl.a`/`libcrypto.a` automatically when that
+directory exists (set `OPENSSL_DIR` to use another tree), so the binaries still
+need no MinGW DLLs. `./dev/tls_smoke.sh` starts `http_serve_ok.exe` and requests
+`https://127.0.0.1:18443/` with curl.
+
+mbedTLS is not used for the Windows target: nixpkgs enables
+`MBEDTLS_THREADING_PTHREAD` (the upstream config has threading off), and s2n-tls
+has no Windows backend at all.
+
+### Sanitizers (ASAN/UBSAN) for the Windows build
+
+The nixpkgs clang for mingw ships no `libclang_rt.asan`, so a sanitizer build
+needs [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) (same LLVM major):
+its UCRT x86_64 tree provides the ASAN and UBSAN runtimes. `./dev/win-asan.sh`
+downloads it into `.build/deps/llvm-mingw`, builds `.build-win-san` with
+`-fsanitize=address,undefined -fno-sanitize-recover=undefined`, copies
+`libclang_rt.asan_dynamic-x86_64.dll`, `libc++.dll` and `libunwind.dll` next to
+`test.exe` and runs the suite:
+
+```sh
+./dev/win-asan.sh
+```
+
+The shipping build stays on nixpkgs clang. ASAN on Windows only exists as a
+dynamic runtime and has no LeakSanitizer; ThreadSanitizer is not supported on
+Windows at all, so races stay covered by the Linux run.
 
 ### Stack traces
 

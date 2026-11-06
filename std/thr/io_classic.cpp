@@ -158,6 +158,9 @@ int PollIoReactor::recvmmsg(int fd, mmsghdr* msgs, unsigned vlen, int flags, uns
             return EAGAIN;
         }
     }
+#elif defined(_WIN32)
+    (void)fd; (void)msgs; (void)vlen; (void)flags; (void)nMsgs; (void)deadlineUs;
+    return ENOTSUP;
 #else
     (void)fd; (void)msgs; (void)vlen; (void)flags; (void)nMsgs; (void)deadlineUs;
     return ENOSYS;

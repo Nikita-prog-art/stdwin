@@ -2,9 +2,23 @@
 
 set -xue
 
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+cd "$ROOT"
+
 JOBS="${JOBS:-$(nproc)}"
+OPENSSL_DIR="${OPENSSL_DIR:-$ROOT/.build/deps/openssl-win}"
+CPPFLAGS="${CPPFLAGS:-}"
+LDFLAGS="${LDFLAGS:-}"
+
+# TLS is optional: use the tree built by ./dev/openssl-win.sh when present
+if [ -e "$OPENSSL_DIR/lib/libssl.a" ]; then
+    CPPFLAGS="$CPPFLAGS -I$OPENSSL_DIR/include"
+    LDFLAGS="$LDFLAGS -L$OPENSSL_DIR/lib -lssl -lcrypto -lcrypt32 -ladvapi32 -luser32"
+fi
 
 nix-shell -p 'pkgsCross.mingw-ucrt-x86_64-llvm.buildPackages.llvmPackages_23.clang' --run "
+    CPPFLAGS='$CPPFLAGS' \
+    LDFLAGS='$LDFLAGS' \
     CC=x86_64-w64-mingw32-clang \
     CXX=x86_64-w64-mingw32-clang++ \
     AR=x86_64-w64-mingw32-ar \

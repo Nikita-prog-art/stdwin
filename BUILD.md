@@ -69,6 +69,9 @@ Platform notes:
 - `recvmsg`/`sendmsg`/`recvmmsg` and `SCM_RIGHTS`-style control messages return
   `ENOTSUP` on Windows.
 
+The reasoning behind these decisions, the full list of platform limits and the
+POSIX → Win32 mapping are in [WIN32.md](WIN32.md).
+
 ## Optional dependencies
 
 The project uses `__has_include` to detect available libraries at compile time. No library is required — the code always compiles with built-in fallbacks.
